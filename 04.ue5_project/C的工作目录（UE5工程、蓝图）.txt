@@ -1,0 +1,6 @@
+.uproject
+.Config/
+.Plugins/
+.Content/（蓝图uasset、关卡umap、小贴图，由GitLFS管理）
+.gitignore
+.gitattributes
