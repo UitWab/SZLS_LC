@@ -2,6 +2,8 @@ import pytest
 from pydantic import ValidationError
 
 from backend_db.schemas import (
+    CursorPageRequest,
+    CursorPageResult,
     PageRequest,
     PageResult,
     SchemaModel,
@@ -69,3 +71,22 @@ def test_page_result_serializes_typed_items_without_internal_objects():
 def test_sort_order_uses_stable_lowercase_values():
     assert SortOrder.ASC.value == "asc"
     assert SortOrder.DESC.value == "desc"
+
+
+def test_cursor_page_contract_is_ready_for_future_incremental_sync():
+    request = CursorPageRequest(cursor="opaque-cursor", limit=50)
+    result = CursorPageResult[ExampleItem](
+        items=[ExampleItem(code="BEAM_001")],
+        next_cursor="next-opaque-cursor",
+        has_more=True,
+    )
+
+    assert request.limit == 50
+    assert result.model_dump(mode="json") == {
+        "items": [{"code": "BEAM_001"}],
+        "next_cursor": "next-opaque-cursor",
+        "has_more": True,
+    }
+
+    with pytest.raises(ValidationError):
+        CursorPageRequest(limit=101)

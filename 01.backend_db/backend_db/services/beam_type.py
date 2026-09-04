@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from backend_db.crud.beam_type import (
     create_beam_type,
@@ -11,12 +11,7 @@ from backend_db.crud.beam_type import (
     update_beam_type,
 )
 from backend_db.database.unit_of_work import UnitOfWork
-from backend_db.exceptions import (
-    BackendDBError,
-    BeamTypeNotFoundError,
-    DatabaseUnavailableError,
-    ResourceAlreadyExistsError,
-)
+from backend_db.exceptions import BeamTypeNotFoundError, ResourceAlreadyExistsError
 from backend_db.schemas import (
     BeamTypeCreate,
     BeamTypeFilter,
@@ -28,6 +23,7 @@ from backend_db.schemas import (
     PageResult,
     SortOrder,
 )
+from backend_db.services._errors import raise_database_error
 
 
 UnitOfWorkFactory = Callable[[], UnitOfWork]
@@ -57,7 +53,7 @@ class BeamTypeService:
                 f"梁型编码已存在: {data.type_code}"
             ) from None
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
+            raise_database_error(error)
 
     def get(self, beam_type_id: int) -> BeamTypeRead:
         try:
@@ -74,7 +70,7 @@ class BeamTypeService:
 
                 return BeamTypeRead.model_validate(beam_type)
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
+            raise_database_error(error)
 
     def get_by_code(self, type_code: str) -> BeamTypeRead:
         try:
@@ -91,7 +87,7 @@ class BeamTypeService:
 
                 return BeamTypeRead.model_validate(beam_type)
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
+            raise_database_error(error)
 
     def list(
         self,
@@ -128,7 +124,7 @@ class BeamTypeService:
                     has_previous=page_request.page > 1,
                 )
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
+            raise_database_error(error)
 
     def update(
         self,
@@ -160,7 +156,7 @@ class BeamTypeService:
                 unit_of_work.commit()
                 return result
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
+            raise_database_error(error)
 
     def set_active(
         self,
@@ -189,11 +185,4 @@ class BeamTypeService:
                 unit_of_work.commit()
                 return result
         except SQLAlchemyError as error:
-            self._raise_database_error(error)
-
-    @staticmethod
-    def _raise_database_error(error: SQLAlchemyError) -> None:
-        if isinstance(error, OperationalError):
-            raise DatabaseUnavailableError("数据库暂时不可访问") from None
-
-        raise BackendDBError("数据库操作失败") from None
+            raise_database_error(error)

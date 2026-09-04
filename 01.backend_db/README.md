@@ -14,6 +14,7 @@
 -   Python 3.11
 -   MySQL 8.0
 -   SQLAlchemy 2.x
+-   Pydantic 2.x
 -   Alembic
 -   Pytest
 
@@ -30,7 +31,11 @@ Database
     -   config.py
     -   database/
     -   models/
+    -   schemas/
     -   crud/
+    -   services/
+    -   interfaces/
+    -   mappers/
     -   tests/
     -   migrations/
 -   alembic.ini
@@ -93,6 +98,12 @@ a006ca44c863 (head)
 -   数据库连接测试
 -   数据结构测试
 -   数据约束测试
+-   DTO与接口契约测试
+-   CRUD与事务测试
+-   Service业务规则测试
+-   梁位并发占用测试
+
+测试默认连接 `smart_beam_twin_test`，测试库名称必须以 `_test` 结尾。
 
 运行：
 
@@ -108,7 +119,7 @@ pytest -v
 
 代码结构保持：
 
-models \| crud \| service \| interface
+models \| schemas \| crud \| services \| interfaces
 
 禁止：
 
@@ -120,17 +131,27 @@ models \| crud \| service \| interface
 
 已完成：
 
-数据库基础设施建设。
+-   数据库基础设施与Alembic迁移
+-   独立测试库保护
+-   Unit of Work事务边界
+-   公共DTO、分页、排序和异常契约
+-   梁场区域、梁型、梁位、梁的CRUD与Service
+-   区域树和层级循环保护
+-   梁位分配、释放、移动和并发占用保护
+-   梁状态修改
+-   供B模块调用的Python接口协议与组合工厂
 
-下一阶段：
+调用入口：
 
-CRUD 接口设计。
+```python
+from backend_db.interfaces import create_database_services
 
-目标：
+services = create_database_services()
+```
 
-提供稳定 Python 数据访问接口：
+当前明确不提供梁删除接口。
 
-create_beam() get_beam() list_beam() update_beam() delete_beam()
+下一阶段可根据实际业务需要增加生命周期历史、增量同步和运行期审计事件。
 
 ## 8. 后续目标
 

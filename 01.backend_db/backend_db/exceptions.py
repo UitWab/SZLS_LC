@@ -40,6 +40,14 @@ class PositionOccupiedError(ResourceConflictError):
     code = "position_occupied"
 
 
+class BeamAlreadyPositionedError(ResourceConflictError):
+    code = "beam_already_positioned"
+
+
+class InvalidAreaHierarchyError(ResourceConflictError):
+    code = "invalid_area_hierarchy"
+
+
 class InvalidDataError(BackendDBError):
     """输入数据不符合数据库模块的业务约束。"""
 
@@ -48,6 +56,10 @@ class InvalidDataError(BackendDBError):
 
 class InvalidBeamStatusError(InvalidDataError):
     code = "invalid_beam_status"
+
+
+class InactiveResourceError(InvalidDataError):
+    code = "inactive_resource"
 
 
 class DatabaseUnavailableError(BackendDBError):

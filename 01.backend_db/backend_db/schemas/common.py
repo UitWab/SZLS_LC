@@ -35,3 +35,16 @@ class PageResult(SchemaModel, Generic[ItemT]):
     total: int | None = Field(default=None, ge=0)
     has_next: bool
     has_previous: bool
+
+
+class CursorPageRequest(SchemaModel):
+    """为后续数字孪生增量同步预留的游标分页参数。"""
+
+    cursor: str | None = Field(default=None, max_length=512)
+    limit: int = Field(default=100, ge=1, le=100)
+
+
+class CursorPageResult(SchemaModel, Generic[ItemT]):
+    items: list[ItemT]
+    next_cursor: str | None
+    has_more: bool
