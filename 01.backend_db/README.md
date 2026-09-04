@@ -40,6 +40,8 @@ Database
     -   migrations/
 -   alembic.ini
 -   requirements.txt
+-   pyproject.toml
+-   docs/
 -   .env.example
 -   README.md
 
@@ -148,6 +150,15 @@ from backend_db.interfaces import create_database_services
 
 services = create_database_services()
 ```
+
+安装到B模块的Python环境：
+
+```powershell
+python -m pip install -e .\01.backend_db
+```
+
+完整的数据契约、公开方法、分页筛选、事务和异常说明见
+[`docs/A-B接口接入说明.md`](docs/A-B接口接入说明.md)。
 
 当前明确不提供梁删除接口。
 

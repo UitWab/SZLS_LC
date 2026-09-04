@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel>=0.41"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smart-beam-twin-backend-db"
+version = "1.0.0"
+description = "Database access package for the Smart Beam Twin platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.12,<3",
+    "PyMySQL>=1.1,<2",
+    "python-dotenv>=1.0,<2",
+    "SQLAlchemy>=2.0,<3",
+]
+
+[project.optional-dependencies]
+migration = ["alembic>=1.19,<2"]
+test = [
+    "alembic>=1.19,<2",
+    "pytest>=9.1,<10",
+]
+
+[tool.setuptools.packages.find]
+include = ["backend_db*"]
+exclude = ["backend_db.tests*"]
+
+[tool.setuptools.package-data]
+backend_db = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend_db/tests"]
