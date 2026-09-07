@@ -7,6 +7,7 @@ from backend_db.interfaces import (
     BeamServiceProtocol,
     BeamTypeServiceProtocol,
     ProjectServiceProtocol,
+    OperationAuditLogServiceProtocol,
     ProcessDefinitionServiceProtocol,
     UserServiceProtocol,
     YardAreaServiceProtocol,
@@ -18,6 +19,7 @@ def test_public_factory_returns_all_service_contracts():
     services = create_database_services()
 
     assert isinstance(services.projects, ProjectServiceProtocol)
+    assert isinstance(services.audit_logs, OperationAuditLogServiceProtocol)
     assert isinstance(services.processes, ProcessDefinitionServiceProtocol)
     assert isinstance(services.users, UserServiceProtocol)
     assert isinstance(services.access_control, AccessControlServiceProtocol)
@@ -38,6 +40,7 @@ def test_public_v2_contracts_have_no_physical_delete_operation():
 
     for service in (
         services.projects,
+        services.audit_logs,
         services.processes,
         services.users,
         services.access_control,
@@ -45,11 +48,22 @@ def test_public_v2_contracts_have_no_physical_delete_operation():
         assert not hasattr(service, "delete")
 
 
+def test_public_audit_log_contract_is_append_only():
+    audit_logs = create_database_services().audit_logs
+    assert hasattr(audit_logs, "record")
+    assert hasattr(audit_logs, "get")
+    assert hasattr(audit_logs, "list")
+    assert not hasattr(audit_logs, "update")
+    assert not hasattr(audit_logs, "set_active")
+    assert not hasattr(audit_logs, "delete")
+
+
 def test_public_protocol_annotations_can_be_resolved():
     protocols = (
         AccessControlServiceProtocol,
         BeamTypeServiceProtocol,
         ProjectServiceProtocol,
+        OperationAuditLogServiceProtocol,
         ProcessDefinitionServiceProtocol,
         UserServiceProtocol,
         YardAreaServiceProtocol,

@@ -49,6 +49,14 @@ from backend_db.schemas.process_definition import (
     ProcessDefinitionSummary,
     ProcessDefinitionUpdate,
 )
+from backend_db.schemas.operation_audit_log import (
+    OperationAuditLogCreate,
+    OperationAuditLogFilter,
+    OperationAuditLogRead,
+    OperationAuditLogScope,
+    OperationAuditLogSortField,
+    OperationAuditLogSummary,
+)
 from backend_db.schemas.identity import (
     PasswordHashUpdate,
     EffectivePermissionSet,
@@ -126,6 +134,12 @@ __all__ = [
     "ProcessDefinitionSortField",
     "ProcessDefinitionSummary",
     "ProcessDefinitionUpdate",
+    "OperationAuditLogCreate",
+    "OperationAuditLogFilter",
+    "OperationAuditLogRead",
+    "OperationAuditLogScope",
+    "OperationAuditLogSortField",
+    "OperationAuditLogSummary",
     "PasswordHashUpdate",
     "EffectivePermissionSet",
     "PermissionCreate",

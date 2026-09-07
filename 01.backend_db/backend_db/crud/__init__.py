@@ -40,6 +40,11 @@ from backend_db.crud.project import (
     set_project_active,
     update_project,
 )
+from backend_db.crud.operation_audit_log import (
+    create_operation_audit_log,
+    get_operation_audit_log,
+    list_operation_audit_logs,
+)
 
 
 __all__ = [
@@ -75,4 +80,7 @@ __all__ = [
     "list_projects",
     "set_project_active",
     "update_project",
+    "create_operation_audit_log",
+    "get_operation_audit_log",
+    "list_operation_audit_logs",
 ]

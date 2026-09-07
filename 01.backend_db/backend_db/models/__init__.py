@@ -11,6 +11,7 @@ from backend_db.models.identity import (
     UserCredential,
 )
 from backend_db.models.process_definition import ProcessDefinition
+from backend_db.models.operation_audit_log import OperationAuditLog
 from backend_db.models.yard_area import YardArea
 from backend_db.models.beam_type import BeamType
 from backend_db.models.beam_position import BeamPosition
@@ -29,6 +30,7 @@ __all__ = [
     "ProjectMemberRole",
     "UserCredential",
     "ProcessDefinition",
+    "OperationAuditLog",
     "YardArea",
     "BeamType",
     "BeamPosition",

@@ -57,6 +57,7 @@ def test_core_tables_exist():
         "project_member",
         "project_member_role",
         "process_definition",
+        "operation_audit_log",
         "user_credential",
         "yard_area",
         "beam_type",
@@ -147,6 +148,37 @@ def test_process_definition_schema():
     assert columns["project_id"]["nullable"] is True
     assert ("process_code",) in _unique_columns(inspector, "process_definition")
     assert _foreign_keys(inspector, "process_definition")["project_id"] == "project"
+
+
+def test_operation_audit_log_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("operation_audit_log")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "actor_user_id",
+        "actor_name",
+        "action_code",
+        "resource_type",
+        "resource_code",
+        "result_code",
+        "request_id",
+        "source",
+        "summary",
+        "occurred_at",
+        "created_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["actor_user_id"]["nullable"] is True
+    assert columns["action_code"]["nullable"] is False
+    assert columns["occurred_at"]["nullable"] is False
+    assert _foreign_keys(inspector, "operation_audit_log") == {
+        "actor_user_id": "app_user",
+        "project_id": "project",
+    }
 
 
 def test_yard_area_schema():

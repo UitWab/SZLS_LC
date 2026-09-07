@@ -10,6 +10,7 @@ def create_database_services() -> DatabaseServices:
         BeamService,
         BeamTypeService,
         ProjectService,
+        OperationAuditLogService,
         ProcessDefinitionService,
         UserService,
         YardAreaService,
@@ -17,6 +18,7 @@ def create_database_services() -> DatabaseServices:
 
     return DatabaseServices(
         projects=ProjectService(),
+        audit_logs=OperationAuditLogService(),
         processes=ProcessDefinitionService(),
         users=UserService(),
         access_control=AccessControlService(),

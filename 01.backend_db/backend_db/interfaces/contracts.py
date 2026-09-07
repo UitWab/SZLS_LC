@@ -45,6 +45,12 @@ from backend_db.schemas import (
     ProcessDefinitionSortField,
     ProcessDefinitionSummary,
     ProcessDefinitionUpdate,
+    OperationAuditLogCreate,
+    OperationAuditLogFilter,
+    OperationAuditLogRead,
+    OperationAuditLogScope,
+    OperationAuditLogSortField,
+    OperationAuditLogSummary,
     RoleCreate,
     RoleFilter,
     RoleAssignmentCommand,
@@ -154,6 +160,26 @@ class ProjectServiceProtocol(Protocol):
     ) -> PageResult[ProjectSummary]: ...
     def update(self, project_id: int, data: ProjectUpdate) -> ProjectRead: ...
     def set_active(self, project_id: int, *, is_active: bool) -> ProjectRead: ...
+
+
+@runtime_checkable
+class OperationAuditLogServiceProtocol(Protocol):
+    def record(self, data: OperationAuditLogCreate) -> OperationAuditLogRead: ...
+    def get(
+        self,
+        audit_log_id: int,
+        *,
+        scope: OperationAuditLogScope,
+        project_code: str | None = None,
+    ) -> OperationAuditLogRead: ...
+    def list(
+        self,
+        filters: OperationAuditLogFilter,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: OperationAuditLogSortField = OperationAuditLogSortField.OCCURRED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[OperationAuditLogSummary]: ...
 
 
 @runtime_checkable
@@ -338,6 +364,7 @@ class BeamServiceProtocol(Protocol):
 @dataclass(frozen=True)
 class DatabaseServices:
     projects: ProjectServiceProtocol
+    audit_logs: OperationAuditLogServiceProtocol
     processes: ProcessDefinitionServiceProtocol
     users: UserServiceProtocol
     access_control: AccessControlServiceProtocol

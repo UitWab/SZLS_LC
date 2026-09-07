@@ -49,7 +49,7 @@ Database
 
 ## 4. 数据库设计状态
 
-V1 梁场基础域已经冻结；V2 项目与权限基础域已经完成开发，等待审查与版本冻结。
+V1 梁场基础域已经冻结；V2 项目与权限基础域已经完成。V3 操作审计日志存储能力已经完成开发，等待独立测试、审计与版本冻结。
 
 核心实体：
 
@@ -58,6 +58,7 @@ V1 梁场基础域已经冻结；V2 项目与权限基础域已经完成开发�
 -   auth_role、auth_permission（V2）
 -   auth_role_permission、auth_user_role（V2）
 -   project_member、project_member_role（V2）
+-   operation_audit_log（V3）
 -   yard_area
 -   beam_position
 -   beam_type
@@ -88,7 +89,7 @@ Alembic 已配置。
 
 当前开发数据库版本：
 
-e5c1a7b3d902
+f8a2d4c6b901
 
 检查：
 
@@ -96,7 +97,7 @@ alembic current
 
 应显示：
 
-e5c1a7b3d902 (head)
+f8a2d4c6b901 (head)
 
 ### 自动测试
 
@@ -161,6 +162,9 @@ models \| schemas \| crud \| services \| interfaces
 -   项目成员的分页查询、启用和停用Service
 -   停用项目成员仍可撤销项目角色，重新启用不会恢复已撤销授权
 -   通用或项目级工序基础资料的CRUD、分页筛选、排序和启停Service
+-   只追加操作审计日志的写入、读取、分页筛选和稳定排序Service
+-   审计记录的可空项目、可空操作用户及操作人名称快照
+-   审计日志不提供更新、启停或删除接口
 
 调用入口：
 
@@ -181,10 +185,10 @@ python -m pip install -e .\01.backend_db
 
 当前明确不提供梁删除接口。
 
-V2 候选交付版本为 `2.0.0`。冻结的 V1 基线为 Git 标签
+V3 候选交付版本为 `3.0.0`。V2 基线提交为 `cdd5d43`。冻结的 V1 基线为 Git 标签
 `backend-db-v1.0.0`，其数据契约版本保持 `1.0.0`。
 
-下一阶段可根据实际业务需要增加生命周期历史、增量同步和运行期审计事件。
+下一阶段可根据实际业务需要增加生命周期历史和增量同步；自动审计接入由 B 在业务流程中完成，A 继续提供只追加存储与范围隔离查询。
 
 ## 8. 后续目标
 

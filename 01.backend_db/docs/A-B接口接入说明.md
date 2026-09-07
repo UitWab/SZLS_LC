@@ -2,12 +2,12 @@
 
 ## 1. 文档信息
 
-- 数据契约版本：2.0.0
+- 数据契约版本：3.0.0
 - Python：3.11 及以上
 - 数据库：MySQL 8.0
 - A 模块包名：`backend_db`
 - B 模块唯一组合入口：`backend_db.interfaces.create_database_services`
-- 当前数据库迁移版本：`e5c1a7b3d902`
+- 当前数据库迁移版本：`f8a2d4c6b901`
 
 本说明定义 A 数据库模块向 B 后端中间件模块提供的 Python 调用契约。B 只依赖公开接口、DTO、枚举和异常，不直接依赖 ORM、CRUD、Session 或表结构实现。
 
@@ -66,6 +66,7 @@ database_services = create_database_services()
 | 属性 | 用途 |
 | --- | --- |
 | `projects` | 项目档案维护与查询 |
+| `audit_logs` | 只追加操作审计日志写入与查询 |
 | `processes` | 通用或项目级工序基础资料配置 |
 | `users` | 用户资料、认证记录和密码散列存储 |
 | `access_control` | 角色、权限、项目成员与有效权限查询 |
@@ -155,6 +156,7 @@ result = database_services.beams.list(
 | 区域 | 项目编码、是否包含全局数据、编码、类型、父区域编码、启停状态、关键词 |
 | 梁位 | 项目编码、是否包含全局数据、编码、区域编码、启停状态、占用状态、关键词 |
 | 梁 | 项目编码、是否包含全局数据、编码、梁型、多个状态、当前梁位、区域、是否在梁位、生产日期范围、创建/更新时间范围、关键词 |
+| 操作审计日志 | 项目编码、操作用户ID、操作人名称、动作代码、资源类型、资源编码、结果代码、请求ID、来源、发生时间范围、关键词 |
 
 排序字段必须使用对应的 `*SortField` 枚举，顺序使用 `SortOrder.ASC` 或 `SortOrder.DESC`，不接受 B 传入任意数据库字段名。
 
@@ -291,6 +293,20 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 角色分为 `SYSTEM` 和 `PROJECT` 两种范围。A 会拒绝把项目角色分配为系统角色，也会拒绝把系统角色分配给项目成员。分配和撤销操作均为幂等操作。停用成员仍允许撤销已有项目角色；撤销后的角色不会在成员重新启用时恢复。停用角色、权限或项目成员后，有效权限查询会自动排除对应权限。
 
+### 8.9 操作审计日志 `database_services.audit_logs`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `record(data)` | `OperationAuditLogCreate` | `OperationAuditLogRead` |
+| `get(audit_log_id, scope, project_code)` | 审计日志ID和显式查询范围 | `OperationAuditLogRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `OperationAuditLogFilter` 等 | `PageResult[OperationAuditLogSummary]` |
+
+操作审计日志是只追加记录，不提供更新、启停或删除接口。B 负责决定何时记录、动作代码、结果代码和可公开保存的摘要；A 只负责引用资源校验、存储和查询。系统级记录允许 `project_code=None`，未登录或系统操作允许 `actor_user_id=None`。提供 `actor_user_id` 或 `project_code` 时，对应资源必须存在。
+
+审计查询必须通过 `OperationAuditLogScope` 显式声明范围：`SYSTEM` 仅查询 `project_id IS NULL` 的系统级日志；`PROJECT` 必须提供 `project_code` 并仅查询该项目；`ALL` 查询系统级及全部项目日志。`SYSTEM`、`ALL` 不允许携带 `project_code`。项目接口应始终使用 `PROJECT`；B 只有完成系统级权限判断后才能调用 `ALL`。A 不实现登录或接口鉴权。
+
+审计记录不得包含密码明文、密码散列、JWT、Session令牌、Cookie、数据库连接串、完整请求头或完整请求体。`request_id` 只用于追踪，不具有幂等或唯一语义。
+
 ## 9. 梁状态契约
 
 梁状态从 `backend_db.schemas.BeamStatus` 导入。当前 14 个稳定编码为：
@@ -333,6 +349,7 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `RoleNotFoundError` | `role_not_found` | 角色不存在 |
 | `PermissionNotFoundError` | `permission_not_found` | 权限不存在 |
 | `ProcessDefinitionNotFoundError` | `process_definition_not_found` | 工序定义不存在 |
+| `OperationAuditLogNotFoundError` | `operation_audit_log_not_found` | 操作审计日志不存在 |
 | `ResourceConflictError` | `resource_conflict` | 资源状态冲突的公共父类 |
 | `ResourceAlreadyExistsError` | `resource_already_exists` | 唯一编码已存在 |
 | `PositionOccupiedError` | `position_occupied` | 目标梁位被占用 |
@@ -368,7 +385,9 @@ B 现在可以基于本契约开发：
 
 B 可以基于 V2 契约继续开发登录、用户管理、角色权限管理和项目成员管理的 HTTP 层。B 负责密码散列算法、登录验证流程、JWT/会话、岗位到页面或接口的授权适配以及 HTTP 错误映射。
 
-B 不应假设当前已经具备以下数据能力：工序流转与任务编排、二维码/RFID 独立身份、工单、质量记录、状态历史、运输记录、设备、告警、审计事件和增量同步。这些能力需要业务口径确认后再扩展 A 的模型与契约。
+B 可以基于 V3 契约在业务操作完成后显式调用 `audit_logs.record` 保存审计结果。后续可由 B 接入自动记录流程；A 不自动拦截或审计 B 的 HTTP、登录、权限判断和消息处理流程。
+
+B 不应假设当前已经具备以下数据能力：工序流转与任务编排、二维码/RFID 独立身份、工单、质量记录、状态历史、运输记录、设备、告警和增量同步。这些能力需要业务口径确认后再扩展 A 的模型与契约。
 
 ## 12. 联调与版本规则
 

@@ -50,6 +50,10 @@ class ProcessDefinitionNotFoundError(ResourceNotFoundError):
     code = "process_definition_not_found"
 
 
+class OperationAuditLogNotFoundError(ResourceNotFoundError):
+    code = "operation_audit_log_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 
