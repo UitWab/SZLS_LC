@@ -48,6 +48,16 @@ def test_core_tables_exist():
     actual_tables = set(inspector.get_table_names())
 
     expected_tables = {
+        "app_user",
+        "auth_permission",
+        "auth_role",
+        "auth_role_permission",
+        "auth_user_role",
+        "project",
+        "project_member",
+        "project_member_role",
+        "process_definition",
+        "user_credential",
         "yard_area",
         "beam_type",
         "beam_position",
@@ -55,6 +65,88 @@ def test_core_tables_exist():
     }
 
     assert expected_tables.issubset(actual_tables)
+
+
+def test_identity_access_schema():
+    inspector = inspect(engine)
+
+    user_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("app_user")
+    }
+    assert "password_hash" not in user_columns
+    assert ("username",) in _unique_columns(inspector, "app_user")
+
+    credential_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("user_credential")
+    }
+    assert set(credential_columns) == {
+        "user_id",
+        "password_hash",
+        "password_changed_at",
+        "created_at",
+        "updated_at",
+    }
+    assert _foreign_keys(inspector, "user_credential")["user_id"] == "app_user"
+
+    assert ("role_code",) in _unique_columns(inspector, "auth_role")
+    assert ("permission_code",) in _unique_columns(
+        inspector,
+        "auth_permission",
+    )
+
+    role_permission_pk = inspector.get_pk_constraint("auth_role_permission")
+    assert set(role_permission_pk["constrained_columns"]) == {
+        "role_id",
+        "permission_id",
+    }
+    role_permission_fks = _foreign_keys(inspector, "auth_role_permission")
+    assert role_permission_fks == {
+        "role_id": "auth_role",
+        "permission_id": "auth_permission",
+    }
+
+
+def test_project_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("project")
+    }
+    assert set(columns) == {
+        "id",
+        "project_code",
+        "project_name",
+        "is_active",
+        "remark",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_code"]["nullable"] is False
+    assert ("project_code",) in _unique_columns(inspector, "project")
+
+
+def test_process_definition_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("process_definition")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "process_code",
+        "process_name",
+        "sort_order",
+        "is_active",
+        "remark",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert ("process_code",) in _unique_columns(inspector, "process_definition")
+    assert _foreign_keys(inspector, "process_definition")["project_id"] == "project"
 
 
 def test_yard_area_schema():
@@ -67,6 +159,7 @@ def test_yard_area_schema():
 
     assert set(columns) == {
         "id",
+        "project_id",
         "area_code",
         "area_name",
         "area_type",
@@ -90,6 +183,8 @@ def test_yard_area_schema():
 
     foreign_keys = _foreign_keys(inspector, "yard_area")
     assert foreign_keys["parent_id"] == "yard_area"
+    assert foreign_keys["project_id"] == "project"
+    assert columns["project_id"]["nullable"] is True
 
 
 def test_beam_type_schema():
@@ -102,6 +197,7 @@ def test_beam_type_schema():
 
     assert set(columns) == {
         "id",
+        "project_id",
         "type_code",
         "type_name",
         "length_mm",
@@ -119,6 +215,8 @@ def test_beam_type_schema():
 
     unique_columns = _unique_columns(inspector, "beam_type")
     assert ("type_code",) in unique_columns
+    assert _foreign_keys(inspector, "beam_type")["project_id"] == "project"
+    assert columns["project_id"]["nullable"] is True
 
 
 def test_beam_position_schema():
@@ -163,6 +261,7 @@ def test_beam_schema():
 
     assert set(columns) == {
         "id",
+        "project_id",
         "beam_code",
         "beam_name",
         "beam_type_id",
@@ -190,3 +289,5 @@ def test_beam_schema():
 
     assert foreign_keys["beam_type_id"] == "beam_type"
     assert foreign_keys["current_position_id"] == "beam_position"
+    assert foreign_keys["project_id"] == "project"
+    assert columns["project_id"]["nullable"] is True

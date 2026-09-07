@@ -9,6 +9,7 @@ def beam_position_to_summary(position: BeamPosition) -> BeamPositionSummary:
         position_name=position.position_name,
         area_code=position.area.area_code,
         area_name=position.area.area_name,
+        project_code=position.project_code,
         is_active=position.is_active,
         is_occupied=position.current_beam is not None,
     )

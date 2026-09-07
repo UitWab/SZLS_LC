@@ -32,6 +32,14 @@ from backend_db.crud.yard_area import (
     set_yard_area_active,
     update_yard_area,
 )
+from backend_db.crud.project import (
+    create_project,
+    get_project,
+    get_project_by_code,
+    list_projects,
+    set_project_active,
+    update_project,
+)
 
 
 __all__ = [
@@ -61,4 +69,10 @@ __all__ = [
     "list_yard_areas",
     "set_yard_area_active",
     "update_yard_area",
+    "create_project",
+    "get_project",
+    "get_project_by_code",
+    "list_projects",
+    "set_project_active",
+    "update_project",
 ]

@@ -19,6 +19,17 @@ class YardArea(IdMixin, TimestampMixin, Base):
 
     __tablename__ = "yard_area"
 
+    project_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey(
+            "project.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+        comment="所属项目ID；V2过渡期允许为空",
+    )
+
     area_code: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
@@ -84,3 +95,12 @@ class YardArea(IdMixin, TimestampMixin, Base):
         "BeamPosition",
         back_populates="area",
     )
+
+    project: Mapped["Project | None"] = relationship(
+        "Project",
+        back_populates="yard_areas",
+    )
+
+    @property
+    def project_code(self) -> str | None:
+        return self.project.project_code if self.project is not None else None

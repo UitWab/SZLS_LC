@@ -29,6 +29,7 @@ def create_yard_area(
     sort_order: int = 0,
     is_active: bool = True,
     remark: str | None = None,
+    project_id: int | None = None,
 ) -> YardArea:
     area = YardArea(
         area_code=area_code,
@@ -38,6 +39,7 @@ def create_yard_area(
         sort_order=sort_order,
         is_active=is_active,
         remark=remark,
+        project_id=project_id,
     )
     session.add(area)
     session.flush()
@@ -50,7 +52,9 @@ def get_yard_area(
     *,
     for_update: bool = False,
 ) -> YardArea | None:
-    statement = select(YardArea).options(joinedload(YardArea.parent)).where(
+    statement = select(YardArea).options(
+        joinedload(YardArea.parent), joinedload(YardArea.project)
+    ).where(
         YardArea.id == area_id
     )
     if for_update:
@@ -64,7 +68,9 @@ def get_yard_area_by_code(
     *,
     for_update: bool = False,
 ) -> YardArea | None:
-    statement = select(YardArea).options(joinedload(YardArea.parent)).where(
+    statement = select(YardArea).options(
+        joinedload(YardArea.parent), joinedload(YardArea.project)
+    ).where(
         YardArea.area_code == area_code
     )
     if for_update:
@@ -76,6 +82,8 @@ def list_yard_areas(
     session: Session,
     *,
     area_code: str | None = None,
+    project_id: int | None = None,
+    include_global: bool = False,
     area_type: str | None = None,
     parent_area_code: str | None = None,
     is_active: bool | None = None,
@@ -95,7 +103,17 @@ def list_yard_areas(
 
     parent = aliased(YardArea)
     conditions = []
-    statement = select(YardArea).options(joinedload(YardArea.parent))
+    if project_id is None:
+        conditions.append(YardArea.project_id.is_(None))
+    elif include_global:
+        conditions.append(
+            or_(YardArea.project_id == project_id, YardArea.project_id.is_(None))
+        )
+    else:
+        conditions.append(YardArea.project_id == project_id)
+    statement = select(YardArea).options(
+        joinedload(YardArea.parent), joinedload(YardArea.project)
+    )
     count_statement = select(func.count()).select_from(YardArea)
 
     if parent_area_code is not None:
@@ -142,8 +160,20 @@ def list_all_yard_areas(
     session: Session,
     *,
     is_active: bool | None = None,
+    project_id: int | None = None,
+    include_global: bool = False,
 ) -> list[YardArea]:
-    statement = select(YardArea).options(joinedload(YardArea.parent))
+    statement = select(YardArea).options(
+        joinedload(YardArea.parent), joinedload(YardArea.project)
+    )
+    if project_id is None:
+        statement = statement.where(YardArea.project_id.is_(None))
+    elif include_global:
+        statement = statement.where(
+            or_(YardArea.project_id == project_id, YardArea.project_id.is_(None))
+        )
+    else:
+        statement = statement.where(YardArea.project_id == project_id)
     if is_active is not None:
         statement = statement.where(YardArea.is_active == is_active)
     statement = statement.order_by(YardArea.sort_order.asc(), YardArea.id.asc())

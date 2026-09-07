@@ -18,6 +18,7 @@ class BeamCreate(SchemaModel):
     beam_code: BeamCode
     beam_name: BeamName | None = None
     beam_type_code: BusinessCode
+    project_code: BusinessCode | None = None
     status: BeamStatus = BeamStatus.UNPRODUCED
     production_date: date | None = None
     remark: Remark | None = None
@@ -50,6 +51,7 @@ class BeamSummary(SchemaModel):
     beam_name: str | None
     beam_type_code: str
     beam_type_name: str
+    project_code: str | None = None
     status: BeamStatus
     current_position_code: str | None
     is_positioned: bool
@@ -79,6 +81,8 @@ class BeamSortField(StrEnum):
 
 class BeamFilter(SchemaModel):
     beam_code: BeamCode | None = None
+    project_code: BusinessCode | None = None
+    include_global: bool = False
     beam_type_code: BusinessCode | None = None
     statuses: list[BeamStatus] | None = None
     current_position_code: BusinessCode | None = None

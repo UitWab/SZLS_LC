@@ -26,6 +26,30 @@ class YardAreaNotFoundError(ResourceNotFoundError):
     code = "yard_area_not_found"
 
 
+class ProjectNotFoundError(ResourceNotFoundError):
+    code = "project_not_found"
+
+
+class UserNotFoundError(ResourceNotFoundError):
+    code = "user_not_found"
+
+
+class UserCredentialNotFoundError(ResourceNotFoundError):
+    code = "user_credential_not_found"
+
+
+class RoleNotFoundError(ResourceNotFoundError):
+    code = "role_not_found"
+
+
+class PermissionNotFoundError(ResourceNotFoundError):
+    code = "permission_not_found"
+
+
+class ProcessDefinitionNotFoundError(ResourceNotFoundError):
+    code = "process_definition_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 

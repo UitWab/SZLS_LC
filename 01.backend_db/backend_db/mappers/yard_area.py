@@ -8,6 +8,7 @@ def yard_area_to_summary(area: YardArea) -> YardAreaSummary:
         area_code=area.area_code,
         area_name=area.area_name,
         area_type=area.area_type,
+        project_code=area.project_code,
         parent_area_code=area.parent.area_code if area.parent else None,
         is_active=area.is_active,
     )

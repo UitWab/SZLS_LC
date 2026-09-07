@@ -19,6 +19,17 @@ class Beam(IdMixin, TimestampMixin, Base):
 
     __tablename__ = "beam"
 
+    project_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey(
+            "project.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+        comment="所属项目ID；V2过渡期允许为空",
+    )
+
     beam_code: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
@@ -81,3 +92,12 @@ class Beam(IdMixin, TimestampMixin, Base):
         "BeamPosition",
         back_populates="current_beam",
     )
+
+    project: Mapped["Project | None"] = relationship(
+        "Project",
+        back_populates="beams",
+    )
+
+    @property
+    def project_code(self) -> str | None:
+        return self.project.project_code if self.project is not None else None

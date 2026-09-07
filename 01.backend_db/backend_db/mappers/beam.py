@@ -10,6 +10,7 @@ def beam_to_summary(beam: Beam) -> BeamSummary:
         beam_name=beam.beam_name,
         beam_type_code=beam.beam_type.type_code,
         beam_type_name=beam.beam_type.type_name,
+        project_code=beam.project_code,
         status=BeamStatus(beam.status),
         current_position_code=position.position_code if position else None,
         is_positioned=position is not None,

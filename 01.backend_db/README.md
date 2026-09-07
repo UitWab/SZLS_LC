@@ -49,10 +49,15 @@ Database
 
 ## 4. 数据库设计状态
 
-当前完成梁场基础域设计。
+V1 梁场基础域已经冻结；V2 项目与权限基础域已经完成开发，等待审查与版本冻结。
 
 核心实体：
 
+-   project（V2）
+-   app_user、user_credential（V2）
+-   auth_role、auth_permission（V2）
+-   auth_role_permission、auth_user_role（V2）
+-   project_member、project_member_role（V2）
 -   yard_area
 -   beam_position
 -   beam_type
@@ -81,9 +86,9 @@ beam_type -\> beam
 
 Alembic 已配置。
 
-当前数据库版本：
+当前开发数据库版本：
 
-a006ca44c863
+e5c1a7b3d902
 
 检查：
 
@@ -91,7 +96,7 @@ alembic current
 
 应显示：
 
-a006ca44c863 (head)
+e5c1a7b3d902 (head)
 
 ### 自动测试
 
@@ -142,6 +147,20 @@ models \| schemas \| crud \| services \| interfaces
 -   梁位分配、释放、移动和并发占用保护
 -   梁状态修改
 -   供B模块调用的Python接口协议与组合工厂
+-   V2项目档案、公开项目Service和兼容迁移
+-   为梁型、区域和梁预留可空项目归属
+-   梁型、区域、梁位、梁和工序的公开接口按 `project_code` 隔离；未传项目时仅访问 V1 全局数据
+-   V2用户、密码凭据、角色、权限及角色权限关系的数据模型
+-   普通用户DTO与登录验证用凭据DTO隔离
+-   用户资料、认证记录和密码散列更新Service
+-   角色、权限及角色授权/撤权Service
+-   系统级用户角色与项目成员、项目角色关系
+-   系统权限与项目权限合并查询Service
+-   角色与权限目录的查询、更新、筛选、分页和启停Service
+-   系统角色与项目角色的分配、撤销和查询Service
+-   项目成员的分页查询、启用和停用Service
+-   停用项目成员仍可撤销项目角色，重新启用不会恢复已撤销授权
+-   通用或项目级工序基础资料的CRUD、分页筛选、排序和启停Service
 
 调用入口：
 
@@ -161,6 +180,9 @@ python -m pip install -e .\01.backend_db
 [`docs/A-B接口接入说明.md`](docs/A-B接口接入说明.md)。
 
 当前明确不提供梁删除接口。
+
+V2 候选交付版本为 `2.0.0`。冻结的 V1 基线为 Git 标签
+`backend-db-v1.0.0`，其数据契约版本保持 `1.0.0`。
 
 下一阶段可根据实际业务需要增加生命周期历史、增量同步和运行期审计事件。
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Numeric, String
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend_db.models.base import Base
@@ -13,6 +13,17 @@ class BeamType(IdMixin, TimestampMixin, Base):
     """梁型档案。"""
 
     __tablename__ = "beam_type"
+
+    project_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey(
+            "project.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+        comment="所属项目ID；V2过渡期允许为空",
+    )
 
     type_code: Mapped[str] = mapped_column(
         String(64),
@@ -67,3 +78,12 @@ class BeamType(IdMixin, TimestampMixin, Base):
         "Beam",
         back_populates="beam_type",
     )
+
+    project: Mapped["Project | None"] = relationship(
+        "Project",
+        back_populates="beam_types",
+    )
+
+    @property
+    def project_code(self) -> str | None:
+        return self.project.project_code if self.project is not None else None

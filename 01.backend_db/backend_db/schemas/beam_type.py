@@ -20,6 +20,7 @@ Description = Annotated[str, Field(max_length=500)]
 class BeamTypeCreate(SchemaModel):
     type_code: BusinessCode
     type_name: TypeName
+    project_code: BusinessCode | None = None
     length_mm: Dimension | None = None
     width_mm: Dimension | None = None
     height_mm: Dimension | None = None
@@ -50,6 +51,7 @@ class BeamTypeSummary(SchemaModel):
     id: int = Field(gt=0)
     type_code: str
     type_name: str
+    project_code: str | None = None
     is_active: bool
 
 
@@ -73,6 +75,8 @@ class BeamTypeSortField(StrEnum):
 
 class BeamTypeFilter(SchemaModel):
     type_code: BusinessCode | None = None
+    project_code: BusinessCode | None = None
+    include_global: bool = False
     is_active: bool | None = None
     keyword: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     length_mm_min: Dimension | None = None

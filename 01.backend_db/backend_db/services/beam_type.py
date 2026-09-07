@@ -24,6 +24,7 @@ from backend_db.schemas import (
     SortOrder,
 )
 from backend_db.services._errors import raise_database_error
+from backend_db.services._project_scope import matches_project_scope, resolve_project_scope
 
 
 UnitOfWorkFactory = Callable[[], UnitOfWork]
@@ -41,10 +42,15 @@ class BeamTypeService:
     def create(self, data: BeamTypeCreate) -> BeamTypeRead:
         try:
             with self._unit_of_work_factory() as unit_of_work:
+                project = resolve_project_scope(
+                    unit_of_work, data.project_code, require_active=True
+                )
                 beam_type = create_beam_type(
                     unit_of_work.session,
-                    **data.model_dump(),
+                    **data.model_dump(exclude={"project_code"}),
+                    project_id=project.id if project is not None else None,
                 )
+                beam_type.project = project
                 result = BeamTypeRead.model_validate(beam_type)
                 unit_of_work.commit()
                 return result
@@ -55,15 +61,18 @@ class BeamTypeService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def get(self, beam_type_id: int) -> BeamTypeRead:
+    def get(self, beam_type_id: int, *, project_code: str | None = None) -> BeamTypeRead:
         try:
             with self._unit_of_work_factory() as unit_of_work:
                 beam_type = get_beam_type(
                     unit_of_work.session,
                     beam_type_id,
                 )
+                project = resolve_project_scope(unit_of_work, project_code)
 
-                if beam_type is None:
+                if beam_type is None or not matches_project_scope(
+                    beam_type.project_id, project
+                ):
                     raise BeamTypeNotFoundError(
                         f"梁型不存在: id={beam_type_id}"
                     )
@@ -72,15 +81,20 @@ class BeamTypeService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def get_by_code(self, type_code: str) -> BeamTypeRead:
+    def get_by_code(
+        self, type_code: str, *, project_code: str | None = None
+    ) -> BeamTypeRead:
         try:
             with self._unit_of_work_factory() as unit_of_work:
                 beam_type = get_beam_type_by_code(
                     unit_of_work.session,
                     type_code,
                 )
+                project = resolve_project_scope(unit_of_work, project_code)
 
-                if beam_type is None:
+                if beam_type is None or not matches_project_scope(
+                    beam_type.project_id, project
+                ):
                     raise BeamTypeNotFoundError(
                         f"梁型不存在: type_code={type_code}"
                     )
@@ -102,9 +116,15 @@ class BeamTypeService:
 
         try:
             with self._unit_of_work_factory() as unit_of_work:
+                filter_values = filters.model_dump(exclude_none=True)
+                project_code = filter_values.pop("project_code", None)
+                include_global = filter_values.pop("include_global", False)
+                project = resolve_project_scope(unit_of_work, project_code)
                 items, total, has_next = list_beam_types(
                     unit_of_work.session,
-                    **filters.model_dump(exclude_none=True),
+                    **filter_values,
+                    project_id=project.id if project is not None else None,
+                    include_global=include_global,
                     page=page_request.page,
                     page_size=page_request.page_size,
                     sort_by=sort_by.value,
@@ -130,6 +150,8 @@ class BeamTypeService:
         self,
         beam_type_id: int,
         data: BeamTypeUpdate,
+        *,
+        project_code: str | None = None,
     ) -> BeamTypeRead:
         try:
             with self._unit_of_work_factory() as unit_of_work:
@@ -137,8 +159,11 @@ class BeamTypeService:
                     unit_of_work.session,
                     beam_type_id,
                 )
+                project = resolve_project_scope(unit_of_work, project_code)
 
-                if beam_type is None:
+                if beam_type is None or not matches_project_scope(
+                    beam_type.project_id, project
+                ):
                     raise BeamTypeNotFoundError(
                         f"梁型不存在: id={beam_type_id}"
                     )
@@ -163,6 +188,7 @@ class BeamTypeService:
         beam_type_id: int,
         *,
         is_active: bool,
+        project_code: str | None = None,
     ) -> BeamTypeRead:
         try:
             with self._unit_of_work_factory() as unit_of_work:
@@ -170,8 +196,11 @@ class BeamTypeService:
                     unit_of_work.session,
                     beam_type_id,
                 )
+                project = resolve_project_scope(unit_of_work, project_code)
 
-                if beam_type is None:
+                if beam_type is None or not matches_project_scope(
+                    beam_type.project_id, project
+                ):
                     raise BeamTypeNotFoundError(
                         f"梁型不存在: id={beam_type_id}"
                     )

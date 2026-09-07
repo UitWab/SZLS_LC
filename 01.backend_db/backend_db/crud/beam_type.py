@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from decimal import Decimal
 
 from sqlalchemy import asc, desc, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend_db.models import BeamType
 
@@ -38,6 +38,7 @@ def create_beam_type(
     weight_kg: Decimal | None = None,
     description: str | None = None,
     is_active: bool = True,
+    project_id: int | None = None,
 ) -> BeamType:
     beam_type = BeamType(
         type_code=type_code,
@@ -48,6 +49,7 @@ def create_beam_type(
         weight_kg=weight_kg,
         description=description,
         is_active=is_active,
+        project_id=project_id,
     )
 
     session.add(beam_type)
@@ -56,7 +58,11 @@ def create_beam_type(
 
 
 def get_beam_type(session: Session, beam_type_id: int) -> BeamType | None:
-    return session.get(BeamType, beam_type_id)
+    return session.scalar(
+        select(BeamType)
+        .options(joinedload(BeamType.project))
+        .where(BeamType.id == beam_type_id)
+    )
 
 
 def get_beam_type_by_code(
@@ -64,7 +70,9 @@ def get_beam_type_by_code(
     type_code: str,
 ) -> BeamType | None:
     return session.scalar(
-        select(BeamType).where(BeamType.type_code == type_code)
+        select(BeamType)
+        .options(joinedload(BeamType.project))
+        .where(BeamType.type_code == type_code)
     )
 
 
@@ -72,6 +80,8 @@ def list_beam_types(
     session: Session,
     *,
     type_code: str | None = None,
+    project_id: int | None = None,
+    include_global: bool = False,
     is_active: bool | None = None,
     keyword: str | None = None,
     length_mm_min: Decimal | None = None,
@@ -104,6 +114,15 @@ def list_beam_types(
 
     conditions = []
 
+    if project_id is None:
+        conditions.append(BeamType.project_id.is_(None))
+    elif include_global:
+        conditions.append(
+            or_(BeamType.project_id == project_id, BeamType.project_id.is_(None))
+        )
+    else:
+        conditions.append(BeamType.project_id == project_id)
+
     if type_code is not None:
         conditions.append(BeamType.type_code == type_code)
 
@@ -131,7 +150,7 @@ def list_beam_types(
         if maximum is not None:
             conditions.append(column <= maximum)
 
-    statement = select(BeamType).where(*conditions)
+    statement = select(BeamType).options(joinedload(BeamType.project)).where(*conditions)
     total = None
 
     if include_total:

@@ -48,7 +48,7 @@ def create_beam_position(
 
 def _position_statement():
     return select(BeamPosition).options(
-        joinedload(BeamPosition.area),
+        joinedload(BeamPosition.area).joinedload(YardArea.project),
         joinedload(BeamPosition.current_beam),
     )
 
@@ -83,6 +83,8 @@ def list_beam_positions(
     session: Session,
     *,
     position_code: str | None = None,
+    project_id: int | None = None,
+    include_global: bool = False,
     area_code: str | None = None,
     is_active: bool | None = None,
     is_occupied: bool | None = None,
@@ -101,6 +103,14 @@ def list_beam_positions(
         raise ValueError("sort_order 只能是 asc 或 desc")
 
     conditions = []
+    if project_id is None:
+        conditions.append(YardArea.project_id.is_(None))
+    elif include_global:
+        conditions.append(
+            or_(YardArea.project_id == project_id, YardArea.project_id.is_(None))
+        )
+    else:
+        conditions.append(YardArea.project_id == project_id)
     if position_code is not None:
         conditions.append(BeamPosition.position_code == position_code)
     if area_code is not None:

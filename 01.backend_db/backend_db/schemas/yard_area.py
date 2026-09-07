@@ -17,6 +17,7 @@ class YardAreaCreate(SchemaModel):
     area_code: AreaCode
     area_name: AreaName
     area_type: AreaType
+    project_code: AreaCode | None = None
     parent_area_code: AreaCode | None = None
     sort_order: int = 0
     is_active: bool = True
@@ -43,6 +44,7 @@ class YardAreaSummary(SchemaModel):
     area_code: str
     area_name: str
     area_type: str
+    project_code: str | None = None
     parent_area_code: str | None
     is_active: bool
 
@@ -70,6 +72,8 @@ class YardAreaSortField(StrEnum):
 
 class YardAreaFilter(SchemaModel):
     area_code: AreaCode | None = None
+    project_code: AreaCode | None = None
+    include_global: bool = False
     area_type: AreaType | None = None
     parent_area_code: AreaCode | None = None
     is_active: bool | None = None

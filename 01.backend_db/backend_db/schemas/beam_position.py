@@ -22,6 +22,7 @@ class BeamPositionCreate(SchemaModel):
     position_code: PositionCode
     position_name: PositionName | None = None
     area_code: AreaCode
+    project_code: AreaCode | None = None
     x_mm: Coordinate | None = None
     y_mm: Coordinate | None = None
     z_mm: Coordinate | None = None
@@ -50,6 +51,7 @@ class BeamPositionSummary(SchemaModel):
     position_name: str | None
     area_code: str
     area_name: str
+    project_code: str | None = None
     is_active: bool
     is_occupied: bool
 
@@ -75,6 +77,8 @@ class BeamPositionSortField(StrEnum):
 
 class BeamPositionFilter(SchemaModel):
     position_code: PositionCode | None = None
+    project_code: AreaCode | None = None
+    include_global: bool = False
     area_code: AreaCode | None = None
     is_active: bool | None = None
     is_occupied: bool | None = None

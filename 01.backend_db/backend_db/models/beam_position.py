@@ -84,3 +84,7 @@ class BeamPosition(IdMixin, TimestampMixin, Base):
         back_populates="current_position",
         uselist=False,
     )
+
+    @property
+    def project_code(self) -> str | None:
+        return self.area.project_code

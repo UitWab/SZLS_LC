@@ -30,6 +30,7 @@ def create_beam(
     beam_name: str | None = None,
     production_date: date | None = None,
     remark: str | None = None,
+    project_id: int | None = None,
 ) -> Beam:
     beam = Beam(
         beam_code=beam_code,
@@ -39,6 +40,7 @@ def create_beam(
         status=status,
         production_date=production_date,
         remark=remark,
+        project_id=project_id,
     )
     session.add(beam)
     session.flush()
@@ -49,6 +51,7 @@ def _beam_statement():
     return select(Beam).options(
         joinedload(Beam.beam_type),
         joinedload(Beam.current_position).joinedload(BeamPosition.area),
+        joinedload(Beam.project),
     )
 
 
@@ -80,6 +83,8 @@ def list_beams(
     session: Session,
     *,
     beam_code: str | None = None,
+    project_id: int | None = None,
+    include_global: bool = False,
     beam_type_code: str | None = None,
     statuses: list[str] | None = None,
     current_position_code: str | None = None,
@@ -106,6 +111,12 @@ def list_beams(
         raise ValueError("sort_order 只能是 asc 或 desc")
 
     conditions = []
+    if project_id is None:
+        conditions.append(Beam.project_id.is_(None))
+    elif include_global:
+        conditions.append(or_(Beam.project_id == project_id, Beam.project_id.is_(None)))
+    else:
+        conditions.append(Beam.project_id == project_id)
     if beam_code is not None:
         conditions.append(Beam.beam_code == beam_code)
     if beam_type_code is not None:

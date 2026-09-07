@@ -72,7 +72,7 @@ A（Dev-db 分支，数据库）
 
 B（Dev-middleware 分支，中介中间件）
 
-1.在backend\_middleware写 FastAPI 中介代码，直接导入调用 A 写好的backend\_db的 CRUD 模块。
+1.在backend\_middleware写 FastAPI 中介代码，通过 `backend_db.interfaces.create_database_services` 调用 A 提供的公开 Service；不得直接依赖 ORM、CRUD 或数据库 Session。
 
 2.维护simulator下 PLC 模拟脚本；更新docs中的接口文档、JSON 报文、枚举。
 

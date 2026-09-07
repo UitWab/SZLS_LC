@@ -37,6 +37,7 @@ from backend_db.schemas import (
     YardAreaUpdate,
 )
 from backend_db.services._errors import raise_database_error
+from backend_db.services._project_scope import matches_project_scope, resolve_project_scope
 
 
 class YardAreaService:
@@ -46,13 +47,20 @@ class YardAreaService:
     def create(self, data: YardAreaCreate) -> YardAreaRead:
         try:
             with self._unit_of_work_factory() as unit:
-                parent = self._resolve_parent(unit, data.parent_area_code)
-                values = data.model_dump(exclude={"parent_area_code"})
+                project = resolve_project_scope(unit, data.project_code, require_active=True)
+                parent = self._resolve_parent(
+                    unit,
+                    data.parent_area_code,
+                    project_id=project.id if project is not None else None,
+                )
+                values = data.model_dump(exclude={"parent_area_code", "project_code"})
                 area = create_yard_area(
                     unit.session,
                     **values,
                     parent_id=parent.id if parent else None,
+                    project_id=project.id if project is not None else None,
                 )
+                area.project = project
                 result = yard_area_to_read(area)
                 unit.commit()
                 return result
@@ -63,17 +71,20 @@ class YardAreaService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def get(self, area_id: int) -> YardAreaRead:
-        return self._get_one(area_id=area_id)
+    def get(self, area_id: int, *, project_code: str | None = None) -> YardAreaRead:
+        return self._get_one(area_id=area_id, project_code=project_code)
 
-    def get_by_code(self, area_code: str) -> YardAreaRead:
-        return self._get_one(area_code=area_code)
+    def get_by_code(
+        self, area_code: str, *, project_code: str | None = None
+    ) -> YardAreaRead:
+        return self._get_one(area_code=area_code, project_code=project_code)
 
     def _get_one(
         self,
         *,
         area_id: int | None = None,
         area_code: str | None = None,
+        project_code: str | None = None,
     ) -> YardAreaRead:
         try:
             with self._unit_of_work_factory() as unit:
@@ -82,7 +93,8 @@ class YardAreaService:
                     if area_id is not None
                     else get_yard_area_by_code(unit.session, area_code or "")
                 )
-                if area is None:
+                project = resolve_project_scope(unit, project_code)
+                if area is None or not matches_project_scope(area.project_id, project):
                     identity = f"id={area_id}" if area_id is not None else f"area_code={area_code}"
                     raise YardAreaNotFoundError(f"区域不存在: {identity}")
                 return yard_area_to_read(area)
@@ -101,9 +113,15 @@ class YardAreaService:
         page_request = page_request or PageRequest()
         try:
             with self._unit_of_work_factory() as unit:
+                filter_values = filters.model_dump(exclude_none=True)
+                project_code = filter_values.pop("project_code", None)
+                include_global = filter_values.pop("include_global", False)
+                project = resolve_project_scope(unit, project_code)
                 items, total, has_next = list_yard_areas(
                     unit.session,
-                    **filters.model_dump(exclude_none=True),
+                    **filter_values,
+                    project_id=project.id if project is not None else None,
+                    include_global=include_global,
                     page=page_request.page,
                     page_size=page_request.page_size,
                     sort_by=sort_by.value,
@@ -121,10 +139,22 @@ class YardAreaService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def tree(self, *, is_active: bool | None = True) -> list[YardAreaTreeNode]:
+    def tree(
+        self,
+        *,
+        is_active: bool | None = True,
+        project_code: str | None = None,
+        include_global: bool = False,
+    ) -> list[YardAreaTreeNode]:
         try:
             with self._unit_of_work_factory() as unit:
-                areas = list_all_yard_areas(unit.session, is_active=is_active)
+                project = resolve_project_scope(unit, project_code)
+                areas = list_all_yard_areas(
+                    unit.session,
+                    is_active=is_active,
+                    project_id=project.id if project is not None else None,
+                    include_global=include_global,
+                )
                 nodes = {
                     area.id: YardAreaTreeNode(
                         **yard_area_to_read(area).model_dump(),
@@ -143,11 +173,18 @@ class YardAreaService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def update(self, area_id: int, data: YardAreaUpdate) -> YardAreaRead:
+    def update(
+        self,
+        area_id: int,
+        data: YardAreaUpdate,
+        *,
+        project_code: str | None = None,
+    ) -> YardAreaRead:
         try:
             with self._unit_of_work_factory() as unit:
                 area = get_yard_area(unit.session, area_id, for_update=True)
-                if area is None:
+                project = resolve_project_scope(unit, project_code)
+                if area is None or not matches_project_scope(area.project_id, project):
                     raise YardAreaNotFoundError(f"区域不存在: id={area_id}")
                 changes = data.model_dump(
                     exclude_unset=True,
@@ -157,6 +194,7 @@ class YardAreaService:
                     parent = self._resolve_parent(
                         unit,
                         data.parent_area_code,
+                        project_id=area.project_id,
                         child_id=area.id,
                     )
                     changes["parent_id"] = parent.id if parent else None
@@ -170,11 +208,18 @@ class YardAreaService:
         except SQLAlchemyError as error:
             raise_database_error(error)
 
-    def set_active(self, area_id: int, *, is_active: bool) -> YardAreaRead:
+    def set_active(
+        self,
+        area_id: int,
+        *,
+        is_active: bool,
+        project_code: str | None = None,
+    ) -> YardAreaRead:
         try:
             with self._unit_of_work_factory() as unit:
                 area = get_yard_area(unit.session, area_id, for_update=True)
-                if area is None:
+                project = resolve_project_scope(unit, project_code)
+                if area is None or not matches_project_scope(area.project_id, project):
                     raise YardAreaNotFoundError(f"区域不存在: id={area_id}")
                 if not is_active:
                     if has_active_child_areas(unit.session, area.id):
@@ -195,6 +240,7 @@ class YardAreaService:
         unit: UnitOfWork,
         parent_area_code: str | None,
         *,
+        project_id: int | None,
         child_id: int | None = None,
     ):
         if parent_area_code is None:
@@ -208,6 +254,8 @@ class YardAreaService:
             raise YardAreaNotFoundError(
                 f"父区域不存在: area_code={parent_area_code}"
             )
+        if parent.project_id != project_id:
+            raise InvalidAreaHierarchyError("父区域与当前区域不属于同一项目")
         if not parent.is_active:
             raise InactiveResourceError("父区域未启用")
         current = parent
