@@ -6,6 +6,7 @@ from backend_db.services.project import ProjectService
 from backend_db.services.identity import AccessControlService, UserService
 from backend_db.services.process_definition import ProcessDefinitionService
 from backend_db.services.operation_audit_log import OperationAuditLogService
+from backend_db.services.beam_position_work_order import BeamPositionWorkOrderService
 
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "UserService",
     "ProcessDefinitionService",
     "OperationAuditLogService",
+    "BeamPositionWorkOrderService",
 ]

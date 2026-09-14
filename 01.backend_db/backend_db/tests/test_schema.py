@@ -58,6 +58,7 @@ def test_core_tables_exist():
         "project_member_role",
         "process_definition",
         "operation_audit_log",
+        "beam_position_work_order",
         "user_credential",
         "yard_area",
         "beam_type",
@@ -179,6 +180,54 @@ def test_operation_audit_log_schema():
         "actor_user_id": "app_user",
         "project_id": "project",
     }
+
+
+def test_beam_position_work_order_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_position_work_order")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "work_order_code",
+        "order_type",
+        "beam_id",
+        "source_position_id",
+        "target_position_id",
+        "status",
+        "planned_at",
+        "started_at",
+        "finished_at",
+        "remark",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["beam_id"]["nullable"] is False
+    assert columns["source_position_id"]["nullable"] is True
+    assert columns["target_position_id"]["nullable"] is True
+    assert columns["status"]["nullable"] is False
+    assert ("work_order_code",) in _unique_columns(
+        inspector, "beam_position_work_order"
+    )
+    assert _foreign_keys(inspector, "beam_position_work_order") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "source_position_id": "beam_position",
+        "target_position_id": "beam_position",
+    }
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("beam_position_work_order")
+    }
+    assert indexes["ix_bpw_order_project_status_id"] == (
+        "project_id",
+        "status",
+        "id",
+    )
+    assert indexes["ix_bpw_order_beam_status"] == ("beam_id", "status")
 
 
 def test_yard_area_schema():

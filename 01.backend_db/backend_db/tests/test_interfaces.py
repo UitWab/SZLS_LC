@@ -4,6 +4,7 @@ from typing import get_type_hints
 from backend_db.interfaces import (
     AccessControlServiceProtocol,
     BeamPositionServiceProtocol,
+    BeamPositionWorkOrderServiceProtocol,
     BeamServiceProtocol,
     BeamTypeServiceProtocol,
     ProjectServiceProtocol,
@@ -26,6 +27,7 @@ def test_public_factory_returns_all_service_contracts():
     assert isinstance(services.beam_types, BeamTypeServiceProtocol)
     assert isinstance(services.yard_areas, YardAreaServiceProtocol)
     assert isinstance(services.beam_positions, BeamPositionServiceProtocol)
+    assert isinstance(services.position_work_orders, BeamPositionWorkOrderServiceProtocol)
     assert isinstance(services.beams, BeamServiceProtocol)
 
 
@@ -58,6 +60,16 @@ def test_public_audit_log_contract_is_append_only():
     assert not hasattr(audit_logs, "delete")
 
 
+def test_public_position_work_order_contract_has_no_direct_update_or_delete():
+    work_orders = create_database_services().position_work_orders
+    assert hasattr(work_orders, "create")
+    assert hasattr(work_orders, "start")
+    assert hasattr(work_orders, "complete")
+    assert hasattr(work_orders, "cancel")
+    assert not hasattr(work_orders, "update")
+    assert not hasattr(work_orders, "delete")
+
+
 def test_public_protocol_annotations_can_be_resolved():
     protocols = (
         AccessControlServiceProtocol,
@@ -68,6 +80,7 @@ def test_public_protocol_annotations_can_be_resolved():
         UserServiceProtocol,
         YardAreaServiceProtocol,
         BeamPositionServiceProtocol,
+        BeamPositionWorkOrderServiceProtocol,
         BeamServiceProtocol,
     )
 

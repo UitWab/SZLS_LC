@@ -13,6 +13,11 @@ from backend_db.schemas import (
     BeamPositionSortField,
     BeamPositionSummary,
     BeamPositionUpdate,
+    BeamPositionWorkOrderCreate,
+    BeamPositionWorkOrderFilter,
+    BeamPositionWorkOrderRead,
+    BeamPositionWorkOrderSortField,
+    BeamPositionWorkOrderSummary,
     BeamRead,
     BeamSortField,
     BeamStatusChange,
@@ -316,6 +321,51 @@ class BeamPositionServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class BeamPositionWorkOrderServiceProtocol(Protocol):
+    def create(
+        self, data: BeamPositionWorkOrderCreate
+    ) -> BeamPositionWorkOrderRead: ...
+    def get(
+        self,
+        work_order_id: int,
+        *,
+        project_code: str | None = None,
+    ) -> BeamPositionWorkOrderRead: ...
+    def get_by_code(
+        self,
+        work_order_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamPositionWorkOrderRead: ...
+    def list(
+        self,
+        filters: BeamPositionWorkOrderFilter | None = None,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: BeamPositionWorkOrderSortField = BeamPositionWorkOrderSortField.ID,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[BeamPositionWorkOrderSummary]: ...
+    def start(
+        self,
+        work_order_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamPositionWorkOrderRead: ...
+    def complete(
+        self,
+        work_order_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamPositionWorkOrderRead: ...
+    def cancel(
+        self,
+        work_order_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamPositionWorkOrderRead: ...
+
+
+@runtime_checkable
 class BeamServiceProtocol(Protocol):
     def create(self, data: BeamCreate) -> BeamRead: ...
     def get(self, beam_id: int, *, project_code: str | None = None) -> BeamRead: ...
@@ -371,4 +421,5 @@ class DatabaseServices:
     beam_types: BeamTypeServiceProtocol
     yard_areas: YardAreaServiceProtocol
     beam_positions: BeamPositionServiceProtocol
+    position_work_orders: BeamPositionWorkOrderServiceProtocol
     beams: BeamServiceProtocol

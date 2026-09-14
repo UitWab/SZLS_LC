@@ -7,6 +7,7 @@ def create_database_services() -> DatabaseServices:
     from backend_db.services import (
         AccessControlService,
         BeamPositionService,
+        BeamPositionWorkOrderService,
         BeamService,
         BeamTypeService,
         ProjectService,
@@ -25,5 +26,6 @@ def create_database_services() -> DatabaseServices:
         beam_types=BeamTypeService(),
         yard_areas=YardAreaService(),
         beam_positions=BeamPositionService(),
+        position_work_orders=BeamPositionWorkOrderService(),
         beams=BeamService(),
     )

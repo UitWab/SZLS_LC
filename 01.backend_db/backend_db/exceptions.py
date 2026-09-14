@@ -54,6 +54,10 @@ class OperationAuditLogNotFoundError(ResourceNotFoundError):
     code = "operation_audit_log_not_found"
 
 
+class BeamPositionWorkOrderNotFoundError(ResourceNotFoundError):
+    code = "beam_position_work_order_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 

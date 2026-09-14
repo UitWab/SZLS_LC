@@ -2,12 +2,12 @@
 
 ## 1. 文档信息
 
-- 数据契约版本：3.0.0
+- 数据契约版本：4.0.0
 - Python：3.11 及以上
 - 数据库：MySQL 8.0
 - A 模块包名：`backend_db`
 - B 模块唯一组合入口：`backend_db.interfaces.create_database_services`
-- 当前数据库迁移版本：`f8a2d4c6b901`
+- 当前数据库迁移版本：`a4d7e9f2c105`
 
 本说明定义 A 数据库模块向 B 后端中间件模块提供的 Python 调用契约。B 只依赖公开接口、DTO、枚举和异常，不直接依赖 ORM、CRUD、Session 或表结构实现。
 
@@ -73,6 +73,7 @@ database_services = create_database_services()
 | `beam_types` | 梁型资料维护与查询 |
 | `yard_areas` | 梁场区域维护、查询和树形结构读取 |
 | `beam_positions` | 梁位维护与占用状态查询 |
+| `position_work_orders` | 梁场内部入位、移位和出位工单 |
 | `beams` | 梁资料、状态和当前梁位管理 |
 
 服务方法为同步 Python 调用。服务集合可以由 B 在应用启动时创建并复用；每次方法调用都会在 A 模块内部创建和关闭数据库 Session。
@@ -89,6 +90,7 @@ database_services = create_database_services()
 - B 不提交、不回滚，也不持有 Session。
 - B 不应假设连续多个 Service 调用属于同一个原子事务。
 - 梁位分配、移动、释放及相关占用检查在 A 内部完成并发保护。
+- 梁位工单完成和梁当前位置变更在同一事务中提交或回滚。
 
 如果未来出现必须跨多个操作保持原子性的业务，应由双方先增加新的 A 层用例接口，而不是让 B 直接控制数据库事务。
 
@@ -156,13 +158,14 @@ result = database_services.beams.list(
 | 区域 | 项目编码、是否包含全局数据、编码、类型、父区域编码、启停状态、关键词 |
 | 梁位 | 项目编码、是否包含全局数据、编码、区域编码、启停状态、占用状态、关键词 |
 | 梁 | 项目编码、是否包含全局数据、编码、梁型、多个状态、当前梁位、区域、是否在梁位、生产日期范围、创建/更新时间范围、关键词 |
+| 梁位工单 | 项目编码、是否包含全局数据、工单编码、梁编码、多个工单类型、多个状态、原梁位、目标梁位、计划时间范围、关键词 |
 | 操作审计日志 | 项目编码、操作用户ID、操作人名称、动作代码、资源类型、资源编码、结果代码、请求ID、来源、发生时间范围、关键词 |
 
 排序字段必须使用对应的 `*SortField` 枚举，顺序使用 `SortOrder.ASC` 或 `SortOrder.DESC`，不接受 B 传入任意数据库字段名。
 
 当前公开列表使用页码分页。`CursorPageRequest` 和 `CursorPageResult` 只是为后续数字孪生增量同步预留的数据结构，当前 Service 尚未提供游标查询方法。
 
-梁型、区域、梁位、梁和工序同时遵循项目作用域规则：
+梁型、区域、梁位、梁、梁位工单和工序同时遵循项目作用域规则：
 
 - `project_code=None` 只访问 V1 全局数据，即 `project_id IS NULL`；
 - 传入 `project_code` 时只访问该项目的数据；
@@ -232,7 +235,23 @@ result = database_services.beams.list(
 
 当前明确不提供删除梁接口。`current_position_*` 只表示梁场内当前物理梁位，不表示运输、到场或架设阶段的全局位置。
 
-### 8.5 项目 `database_services.projects`
+### 8.5 梁位工单 `database_services.position_work_orders`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `create(data)` | `BeamPositionWorkOrderCreate` | `BeamPositionWorkOrderRead` |
+| `get(work_order_id, project_code=...)` | 工单 ID、项目作用域 | `BeamPositionWorkOrderRead` |
+| `get_by_code(work_order_code, project_code=...)` | 工单编码、项目作用域 | `BeamPositionWorkOrderRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `BeamPositionWorkOrderFilter` 等 | `PageResult[BeamPositionWorkOrderSummary]` |
+| `start(work_order_code, project_code=...)` | 工单编码、项目作用域 | `BeamPositionWorkOrderRead` |
+| `complete(work_order_code, project_code=...)` | 工单编码、项目作用域 | `BeamPositionWorkOrderRead` |
+| `cancel(work_order_code, project_code=...)` | 工单编码、项目作用域 | `BeamPositionWorkOrderRead` |
+
+工单类型为 `PLACE`、`MOVE`、`RELEASE`，状态为 `PENDING`、`IN_PROGRESS`、`COMPLETED`、`CANCELED`。创建工单只记录计划，不预占目标梁位；`complete` 会重新锁定梁并核对原梁位，在同一事务中完成梁位变更和工单结束。目标梁位被其他梁占用时整次完成操作回滚，工单仍保持执行中。
+
+同一根梁最多存在一个 `PENDING` 或 `IN_PROGRESS` 工单。业务字段创建后不可任意修改，公开接口只允许开始、完成或取消；不提供删除接口。B 决定何时创建、开始、完成或取消，不应同时调用 `beams` 的直接梁位操作来重复执行同一工单。
+
+### 8.6 项目 `database_services.projects`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -245,7 +264,7 @@ result = database_services.beams.list(
 
 V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空，待真实项目编码和数据归属确认后再制定回填与非空迁移。新建项目级梁场数据时必须提供 `project_code`；省略时创建的是兼容 V1 的全局数据。
 
-### 8.6 工序 `database_services.processes`
+### 8.7 工序 `database_services.processes`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -258,7 +277,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 工序可以是平台通用工序，也可以通过可空 `project_code` 归属于具体项目。`include_global=True` 可以在查询项目工序时同时包含通用工序。该 Service 只管理工序基础资料，不实现工序流转、状态机或生产任务编排。
 
-### 8.7 用户 `database_services.users`
+### 8.8 用户 `database_services.users`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -272,7 +291,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 普通用户 DTO 永远不包含密码散列。`UserAuthRecord` 只供 B 的登录校验流程使用，不应作为普通 HTTP 响应返回。
 
-### 8.8 角色与权限 `database_services.access_control`
+### 8.9 角色与权限 `database_services.access_control`
 
 角色和权限目录：
 
@@ -293,7 +312,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 角色分为 `SYSTEM` 和 `PROJECT` 两种范围。A 会拒绝把项目角色分配为系统角色，也会拒绝把系统角色分配给项目成员。分配和撤销操作均为幂等操作。停用成员仍允许撤销已有项目角色；撤销后的角色不会在成员重新启用时恢复。停用角色、权限或项目成员后，有效权限查询会自动排除对应权限。
 
-### 8.9 操作审计日志 `database_services.audit_logs`
+### 8.10 操作审计日志 `database_services.audit_logs`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -350,6 +369,7 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `PermissionNotFoundError` | `permission_not_found` | 权限不存在 |
 | `ProcessDefinitionNotFoundError` | `process_definition_not_found` | 工序定义不存在 |
 | `OperationAuditLogNotFoundError` | `operation_audit_log_not_found` | 操作审计日志不存在 |
+| `BeamPositionWorkOrderNotFoundError` | `beam_position_work_order_not_found` | 梁位工单不存在或不属于当前项目 |
 | `ResourceConflictError` | `resource_conflict` | 资源状态冲突的公共父类 |
 | `ResourceAlreadyExistsError` | `resource_already_exists` | 唯一编码已存在 |
 | `PositionOccupiedError` | `position_occupied` | 目标梁位被占用 |
@@ -387,7 +407,9 @@ B 可以基于 V2 契约继续开发登录、用户管理、角色权限管理�
 
 B 可以基于 V3 契约在业务操作完成后显式调用 `audit_logs.record` 保存审计结果。后续可由 B 接入自动记录流程；A 不自动拦截或审计 B 的 HTTP、登录、权限判断和消息处理流程。
 
-B 不应假设当前已经具备以下数据能力：工序流转与任务编排、二维码/RFID 独立身份、工单、质量记录、状态历史、运输记录、设备、告警和增量同步。这些能力需要业务口径确认后再扩展 A 的模型与契约。
+B 可以基于 V4 契约开发梁位工单的 HTTP/消息适配与权限判断。A 只实现梁场内部 `PLACE`、`MOVE`、`RELEASE` 数据用例，不实现调度算法、审批、派工、设备控制或页面流程。
+
+B 不应假设当前已经具备以下数据能力：生产或质量任务编排、二维码/RFID 独立身份、质量记录、状态历史、运输记录、设备、告警和增量同步。这些能力需要业务口径确认后再扩展 A 的模型与契约。
 
 ## 12. 联调与版本规则
 

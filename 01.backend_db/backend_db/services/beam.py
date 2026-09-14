@@ -9,20 +9,13 @@ from backend_db.crud.beam import (
     get_beam,
     get_beam_by_code,
     list_beams,
-    set_beam_position,
     set_beam_status,
     update_beam,
-)
-from backend_db.crud.beam_position import (
-    get_beam_at_position,
-    get_beam_position_by_code,
 )
 from backend_db.crud.beam_type import get_beam_type_by_code
 from backend_db.database.unit_of_work import UnitOfWork
 from backend_db.exceptions import (
-    BeamAlreadyPositionedError,
     BeamNotFoundError,
-    BeamPositionNotFoundError,
     BeamTypeNotFoundError,
     InactiveResourceError,
     PositionOccupiedError,
@@ -35,7 +28,6 @@ from backend_db.schemas import (
     BeamPositionCommand,
     BeamRead,
     BeamSortField,
-    BeamStatus,
     BeamStatusChange,
     BeamSummary,
     BeamUpdate,
@@ -44,6 +36,11 @@ from backend_db.schemas import (
     SortOrder,
 )
 from backend_db.services._errors import raise_database_error
+from backend_db.services._beam_positioning import (
+    get_locked_beam,
+    place_beam,
+    release_beam,
+)
 from backend_db.services._project_scope import matches_project_scope, resolve_project_scope
 
 
@@ -202,7 +199,7 @@ class BeamService:
         try:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
-                beam = self._get_locked_beam(unit, beam_code, project=project)
+                beam = get_locked_beam(unit, beam_code, project=project)
                 set_beam_status(unit.session, beam, status=data.status.value)
                 result = beam_to_read(beam)
                 unit.commit()
@@ -249,34 +246,11 @@ class BeamService:
         try:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
-                beam = self._get_locked_beam(unit, beam_code, project=project)
-                position = get_beam_position_by_code(
-                    unit.session,
-                    position_code,
-                    for_update=True,
+                beam = get_locked_beam(unit, beam_code, project=project)
+                place_beam(
+                    unit, beam, position_code,
+                    require_unpositioned=require_unpositioned,
                 )
-                if position is None or position.area.project_id != beam.project_id:
-                    raise BeamPositionNotFoundError(
-                        f"梁位不存在: position_code={position_code}"
-                    )
-                if not position.is_active:
-                    raise InactiveResourceError("目标梁位未启用")
-                if beam.current_position_id == position.id:
-                    return beam_to_read(beam)
-                if require_unpositioned and beam.current_position_id is not None:
-                    raise BeamAlreadyPositionedError(
-                        "梁已有当前位置，请使用 move_beam"
-                    )
-                occupying_beam = get_beam_at_position(
-                    unit.session,
-                    position.id,
-                    for_update=True,
-                )
-                if occupying_beam is not None and occupying_beam.id != beam.id:
-                    raise PositionOccupiedError(
-                        f"梁位已被占用: position_code={position_code}"
-                    )
-                set_beam_position(unit.session, beam, position=position)
                 result = beam_to_read(beam)
                 unit.commit()
                 return result
@@ -293,22 +267,13 @@ class BeamService:
         try:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
-                beam = self._get_locked_beam(unit, beam_code, project=project)
-                if beam.current_position_id is None:
-                    return beam_to_read(beam)
-                set_beam_position(unit.session, beam, position=None)
+                beam = get_locked_beam(unit, beam_code, project=project)
+                release_beam(unit, beam)
                 result = beam_to_read(beam)
                 unit.commit()
                 return result
         except SQLAlchemyError as error:
             raise_database_error(error)
-
-    @staticmethod
-    def _get_locked_beam(unit: UnitOfWork, beam_code: str, *, project):
-        beam = get_beam_by_code(unit.session, beam_code, for_update=True)
-        if beam is None or not matches_project_scope(beam.project_id, project):
-            raise BeamNotFoundError(f"梁不存在: beam_code={beam_code}")
-        return beam
 
     @staticmethod
     def _resolve_active_beam_type(

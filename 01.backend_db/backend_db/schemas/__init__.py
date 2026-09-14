@@ -57,6 +57,15 @@ from backend_db.schemas.operation_audit_log import (
     OperationAuditLogSortField,
     OperationAuditLogSummary,
 )
+from backend_db.schemas.beam_position_work_order import (
+    BeamPositionWorkOrderCreate,
+    BeamPositionWorkOrderFilter,
+    BeamPositionWorkOrderRead,
+    BeamPositionWorkOrderSortField,
+    BeamPositionWorkOrderStatus,
+    BeamPositionWorkOrderSummary,
+    BeamPositionWorkOrderType,
+)
 from backend_db.schemas.identity import (
     PasswordHashUpdate,
     EffectivePermissionSet,
@@ -140,6 +149,13 @@ __all__ = [
     "OperationAuditLogScope",
     "OperationAuditLogSortField",
     "OperationAuditLogSummary",
+    "BeamPositionWorkOrderCreate",
+    "BeamPositionWorkOrderFilter",
+    "BeamPositionWorkOrderRead",
+    "BeamPositionWorkOrderSortField",
+    "BeamPositionWorkOrderStatus",
+    "BeamPositionWorkOrderSummary",
+    "BeamPositionWorkOrderType",
     "PasswordHashUpdate",
     "EffectivePermissionSet",
     "PermissionCreate",
