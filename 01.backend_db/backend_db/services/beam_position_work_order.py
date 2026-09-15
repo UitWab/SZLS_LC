@@ -21,6 +21,7 @@ from backend_db.exceptions import (
 from backend_db.schemas import (
     BeamPositionWorkOrderCreate,
     BeamPositionWorkOrderFilter,
+    BeamLifecycleEventType,
     BeamPositionWorkOrderRead,
     BeamPositionWorkOrderSortField,
     BeamPositionWorkOrderStatus,
@@ -37,6 +38,7 @@ from backend_db.services._beam_positioning import (
     release_beam,
 )
 from backend_db.services._errors import raise_database_error
+from backend_db.services._beam_lifecycle import record_beam_lifecycle_event
 from backend_db.services._project_scope import matches_project_scope, resolve_project_scope
 
 
@@ -288,6 +290,7 @@ class BeamPositionWorkOrderService:
                         raise ResourceConflictError("梁的当前位置已与工单原梁位不一致")
                     if item.order_type == BeamPositionWorkOrderType.RELEASE.value:
                         release_beam(unit, beam)
+                        event_type = BeamLifecycleEventType.POSITION_RELEASED
                     else:
                         if item.target_position is None:
                             raise ResourceConflictError("梁位工单缺少目标梁位")
@@ -298,6 +301,20 @@ class BeamPositionWorkOrderService:
                                 == BeamPositionWorkOrderType.PLACE.value
                             ),
                         )
+                        event_type = (
+                            BeamLifecycleEventType.POSITION_ASSIGNED
+                            if item.order_type
+                            == BeamPositionWorkOrderType.PLACE.value
+                            else BeamLifecycleEventType.POSITION_MOVED
+                        )
+                    record_beam_lifecycle_event(
+                        unit,
+                        beam=beam,
+                        event_type=event_type,
+                        source_position_id=item.source_position_id,
+                        target_position_id=item.target_position_id,
+                        work_order_id=item.id,
+                    )
                     changes = {
                         "status": BeamPositionWorkOrderStatus.COMPLETED.value,
                         "finished_at": now,

@@ -22,7 +22,12 @@ from backend_db.exceptions import (
     ResourceConflictError,
 )
 from backend_db.interfaces import create_database_services
-from backend_db.models import Beam, BeamPosition, BeamPositionWorkOrder
+from backend_db.models import (
+    Beam,
+    BeamLifecycleEvent,
+    BeamPosition,
+    BeamPositionWorkOrder,
+)
 from backend_db.models import BeamType, Project, YardArea
 from backend_db.schemas import (
     BeamCreate,
@@ -86,6 +91,12 @@ def _setup(suffix):
 
 def _cleanup(suffix):
     with SessionLocal.begin() as session:
+        beam_ids = select(Beam.id).where(Beam.beam_code.contains(suffix))
+        session.execute(
+            delete(BeamLifecycleEvent).where(
+                BeamLifecycleEvent.beam_id.in_(beam_ids)
+            )
+        )
         session.execute(
             delete(BeamPositionWorkOrder).where(
                 BeamPositionWorkOrder.work_order_code.contains(suffix)

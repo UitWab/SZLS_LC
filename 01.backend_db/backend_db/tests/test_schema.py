@@ -59,6 +59,9 @@ def test_core_tables_exist():
         "process_definition",
         "operation_audit_log",
         "beam_position_work_order",
+        "beam_lifecycle_event",
+        "beam_lifecycle_event_stream_lock",
+        "beam_process_execution",
         "user_credential",
         "yard_area",
         "beam_type",
@@ -228,6 +231,139 @@ def test_beam_position_work_order_schema():
         "id",
     )
     assert indexes["ix_bpw_order_beam_status"] == ("beam_id", "status")
+
+
+def test_beam_lifecycle_event_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_lifecycle_event")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "beam_id",
+        "event_type",
+        "status_before",
+        "status_after",
+        "source_position_id",
+        "target_position_id",
+        "work_order_id",
+        "occurred_at",
+        "created_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["beam_id"]["nullable"] is False
+    assert columns["event_type"]["nullable"] is False
+    assert columns["occurred_at"]["nullable"] is False
+    assert _foreign_keys(inspector, "beam_lifecycle_event") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "source_position_id": "beam_position",
+        "target_position_id": "beam_position",
+        "work_order_id": "beam_position_work_order",
+    }
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("beam_lifecycle_event")
+    }
+    assert indexes["ix_beam_event_project_occurred_id"] == (
+        "project_id",
+        "occurred_at",
+        "id",
+    )
+    assert indexes["ix_beam_event_beam_occurred_id"] == (
+        "beam_id",
+        "occurred_at",
+        "id",
+    )
+    assert indexes["ix_beam_event_project_id"] == (
+        "project_id",
+        "id",
+    )
+
+
+def test_beam_lifecycle_event_stream_lock_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_lifecycle_event_stream_lock")
+    }
+    assert set(columns) == {"scope_key"}
+    assert columns["scope_key"]["nullable"] is False
+    assert inspector.get_pk_constraint(
+        "beam_lifecycle_event_stream_lock"
+    )["constrained_columns"] == ["scope_key"]
+    assert _foreign_keys(inspector, "beam_lifecycle_event_stream_lock") == {}
+
+
+def test_beam_process_execution_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_process_execution")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "execution_code",
+        "beam_id",
+        "process_definition_id",
+        "result_code",
+        "started_at",
+        "finished_at",
+        "actor_user_id",
+        "actor_name",
+        "source",
+        "external_record_id",
+        "supersedes_execution_id",
+        "remark",
+        "is_voided",
+        "voided_at",
+        "voided_by_user_id",
+        "voided_by_name",
+        "void_reason",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["execution_code"]["nullable"] is False
+    assert columns["finished_at"]["nullable"] is False
+    assert columns["is_voided"]["nullable"] is False
+    assert _foreign_keys(inspector, "beam_process_execution") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "process_definition_id": "process_definition",
+        "actor_user_id": "app_user",
+        "voided_by_user_id": "app_user",
+        "supersedes_execution_id": "beam_process_execution",
+    }
+    unique_columns = _unique_columns(inspector, "beam_process_execution")
+    assert ("execution_code",) in unique_columns
+    assert ("source", "external_record_id") in unique_columns
+    assert ("supersedes_execution_id",) in unique_columns
+    check_names = {
+        item["name"] for item in inspector.get_check_constraints(
+            "beam_process_execution"
+        )
+    }
+    assert {
+        "ck_beam_process_execution_time_order",
+        "ck_beam_process_execution_void_fields",
+    }.issubset(check_names)
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("beam_process_execution")
+    }
+    assert indexes["ix_beam_process_execution_project_finished_id"] == (
+        "project_id", "finished_at", "id"
+    )
+    assert indexes["ix_beam_process_execution_beam_finished_id"] == (
+        "beam_id", "finished_at", "id"
+    )
+    assert indexes["ix_beam_process_execution_process_finished_id"] == (
+        "process_definition_id", "finished_at", "id"
+    )
 
 
 def test_yard_area_schema():

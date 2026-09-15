@@ -19,6 +19,7 @@ from backend_db.interfaces import create_database_services
 from backend_db.models import (
     AppUser,
     Beam,
+    BeamLifecycleEvent,
     BeamPosition,
     BeamType,
     AuthPermission,
@@ -99,6 +100,13 @@ def _cleanup(*, suffix: str) -> None:
         )
         member_ids = [item.id for item in members]
 
+        beam_ids = [item.id for item in beams]
+        if beam_ids:
+            session.execute(
+                delete(BeamLifecycleEvent).where(
+                    BeamLifecycleEvent.beam_id.in_(beam_ids)
+                )
+            )
         for item in beams:
             session.delete(item)
         for item in positions:

@@ -66,6 +66,23 @@ from backend_db.schemas.beam_position_work_order import (
     BeamPositionWorkOrderSummary,
     BeamPositionWorkOrderType,
 )
+from backend_db.schemas.beam_lifecycle_event import (
+    BeamLifecycleEventFilter,
+    BeamLifecycleEventRead,
+    BeamLifecycleEventSortField,
+    BeamLifecycleEventSummary,
+    BeamLifecycleEventType,
+)
+from backend_db.schemas.beam_process_execution import (
+    BeamProcessExecutionCreate,
+    BeamProcessExecutionFilter,
+    BeamProcessExecutionRead,
+    BeamProcessExecutionSortField,
+    BeamProcessExecutionSummary,
+    BeamProcessExecutionVoid,
+    BeamProcessResult,
+    RecordSource,
+)
 from backend_db.schemas.identity import (
     PasswordHashUpdate,
     EffectivePermissionSet,
@@ -156,6 +173,19 @@ __all__ = [
     "BeamPositionWorkOrderStatus",
     "BeamPositionWorkOrderSummary",
     "BeamPositionWorkOrderType",
+    "BeamLifecycleEventFilter",
+    "BeamLifecycleEventRead",
+    "BeamLifecycleEventSortField",
+    "BeamLifecycleEventSummary",
+    "BeamLifecycleEventType",
+    "BeamProcessExecutionCreate",
+    "BeamProcessExecutionFilter",
+    "BeamProcessExecutionRead",
+    "BeamProcessExecutionSortField",
+    "BeamProcessExecutionSummary",
+    "BeamProcessExecutionVoid",
+    "BeamProcessResult",
+    "RecordSource",
     "PasswordHashUpdate",
     "EffectivePermissionSet",
     "PermissionCreate",

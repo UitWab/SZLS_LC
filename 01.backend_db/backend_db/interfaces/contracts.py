@@ -18,6 +18,16 @@ from backend_db.schemas import (
     BeamPositionWorkOrderRead,
     BeamPositionWorkOrderSortField,
     BeamPositionWorkOrderSummary,
+    BeamLifecycleEventFilter,
+    BeamLifecycleEventRead,
+    BeamLifecycleEventSortField,
+    BeamLifecycleEventSummary,
+    BeamProcessExecutionCreate,
+    BeamProcessExecutionFilter,
+    BeamProcessExecutionRead,
+    BeamProcessExecutionSortField,
+    BeamProcessExecutionSummary,
+    BeamProcessExecutionVoid,
     BeamRead,
     BeamSortField,
     BeamStatusChange,
@@ -29,6 +39,8 @@ from backend_db.schemas import (
     BeamTypeSummary,
     BeamTypeUpdate,
     BeamUpdate,
+    CursorPageRequest,
+    CursorPageResult,
     PageRequest,
     PageResult,
     PasswordHashUpdate,
@@ -366,6 +378,57 @@ class BeamPositionWorkOrderServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class BeamLifecycleEventServiceProtocol(Protocol):
+    def get(
+        self,
+        event_id: int,
+        *,
+        project_code: str | None = None,
+    ) -> BeamLifecycleEventRead: ...
+    def list(
+        self,
+        filters: BeamLifecycleEventFilter | None = None,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: BeamLifecycleEventSortField = BeamLifecycleEventSortField.OCCURRED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[BeamLifecycleEventSummary]: ...
+    def list_after(
+        self,
+        filters: BeamLifecycleEventFilter | None = None,
+        cursor_request: CursorPageRequest | None = None,
+    ) -> CursorPageResult[BeamLifecycleEventSummary]: ...
+
+
+@runtime_checkable
+class BeamProcessExecutionServiceProtocol(Protocol):
+    def record(
+        self, data: BeamProcessExecutionCreate
+    ) -> BeamProcessExecutionRead: ...
+    def get(
+        self,
+        execution_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamProcessExecutionRead: ...
+    def list(
+        self,
+        filters: BeamProcessExecutionFilter | None = None,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: BeamProcessExecutionSortField = BeamProcessExecutionSortField.FINISHED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[BeamProcessExecutionSummary]: ...
+    def void(
+        self,
+        execution_code: str,
+        data: BeamProcessExecutionVoid,
+        *,
+        project_code: str | None = None,
+    ) -> BeamProcessExecutionRead: ...
+
+
+@runtime_checkable
 class BeamServiceProtocol(Protocol):
     def create(self, data: BeamCreate) -> BeamRead: ...
     def get(self, beam_id: int, *, project_code: str | None = None) -> BeamRead: ...
@@ -422,4 +485,6 @@ class DatabaseServices:
     yard_areas: YardAreaServiceProtocol
     beam_positions: BeamPositionServiceProtocol
     position_work_orders: BeamPositionWorkOrderServiceProtocol
+    beam_events: BeamLifecycleEventServiceProtocol
+    process_records: BeamProcessExecutionServiceProtocol
     beams: BeamServiceProtocol

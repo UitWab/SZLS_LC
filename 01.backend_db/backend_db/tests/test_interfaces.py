@@ -5,6 +5,7 @@ from backend_db.interfaces import (
     AccessControlServiceProtocol,
     BeamPositionServiceProtocol,
     BeamPositionWorkOrderServiceProtocol,
+    BeamLifecycleEventServiceProtocol,
     BeamServiceProtocol,
     BeamTypeServiceProtocol,
     ProjectServiceProtocol,
@@ -28,6 +29,7 @@ def test_public_factory_returns_all_service_contracts():
     assert isinstance(services.yard_areas, YardAreaServiceProtocol)
     assert isinstance(services.beam_positions, BeamPositionServiceProtocol)
     assert isinstance(services.position_work_orders, BeamPositionWorkOrderServiceProtocol)
+    assert isinstance(services.beam_events, BeamLifecycleEventServiceProtocol)
     assert isinstance(services.beams, BeamServiceProtocol)
 
 
@@ -70,6 +72,18 @@ def test_public_position_work_order_contract_has_no_direct_update_or_delete():
     assert not hasattr(work_orders, "delete")
 
 
+def test_public_beam_lifecycle_event_contract_is_read_only():
+    events = create_database_services().beam_events
+    assert hasattr(events, "get")
+    assert hasattr(events, "list")
+    assert hasattr(events, "list_after")
+    assert not hasattr(events, "record")
+    assert not hasattr(events, "create")
+    assert not hasattr(events, "update")
+    assert not hasattr(events, "set_active")
+    assert not hasattr(events, "delete")
+
+
 def test_public_protocol_annotations_can_be_resolved():
     protocols = (
         AccessControlServiceProtocol,
@@ -81,6 +95,7 @@ def test_public_protocol_annotations_can_be_resolved():
         YardAreaServiceProtocol,
         BeamPositionServiceProtocol,
         BeamPositionWorkOrderServiceProtocol,
+        BeamLifecycleEventServiceProtocol,
         BeamServiceProtocol,
     )
 

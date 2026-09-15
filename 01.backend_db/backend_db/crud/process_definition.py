@@ -25,23 +25,35 @@ def create_process_definition(session: Session, **values) -> ProcessDefinition:
 
 
 def get_process_definition(
-    session: Session, process_definition_id: int
+    session: Session,
+    process_definition_id: int,
+    *,
+    for_update: bool = False,
 ) -> ProcessDefinition | None:
-    return session.scalar(
-        select(ProcessDefinition)
-        .options(joinedload(ProcessDefinition.project))
-        .where(ProcessDefinition.id == process_definition_id)
+    query = select(ProcessDefinition).where(
+        ProcessDefinition.id == process_definition_id
     )
+    if for_update:
+        query = query.with_for_update()
+    else:
+        query = query.options(joinedload(ProcessDefinition.project))
+    return session.scalar(query)
 
 
 def get_process_definition_by_code(
-    session: Session, process_code: str
+    session: Session,
+    process_code: str,
+    *,
+    for_update: bool = False,
 ) -> ProcessDefinition | None:
-    return session.scalar(
-        select(ProcessDefinition)
-        .options(joinedload(ProcessDefinition.project))
-        .where(ProcessDefinition.process_code == process_code)
+    query = select(ProcessDefinition).where(
+        ProcessDefinition.process_code == process_code
     )
+    if for_update:
+        query = query.with_for_update()
+    else:
+        query = query.options(joinedload(ProcessDefinition.project))
+    return session.scalar(query)
 
 
 def list_process_definitions(

@@ -25,6 +25,7 @@ from backend_db.mappers import beam_to_read, beam_to_summary
 from backend_db.schemas import (
     BeamCreate,
     BeamFilter,
+    BeamLifecycleEventType,
     BeamPositionCommand,
     BeamRead,
     BeamSortField,
@@ -36,6 +37,7 @@ from backend_db.schemas import (
     SortOrder,
 )
 from backend_db.services._errors import raise_database_error
+from backend_db.services._beam_lifecycle import record_beam_lifecycle_event
 from backend_db.services._beam_positioning import (
     get_locked_beam,
     place_beam,
@@ -69,6 +71,12 @@ class BeamService:
                     project_id=project.id if project is not None else None,
                 )
                 beam.project = project
+                record_beam_lifecycle_event(
+                    unit,
+                    beam=beam,
+                    event_type=BeamLifecycleEventType.BEAM_CREATED,
+                    status_after=beam.status,
+                )
                 result = beam_to_read(beam)
                 unit.commit()
                 return result
@@ -200,7 +208,16 @@ class BeamService:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
                 beam = get_locked_beam(unit, beam_code, project=project)
-                set_beam_status(unit.session, beam, status=data.status.value)
+                status_before = beam.status
+                if status_before != data.status.value:
+                    set_beam_status(unit.session, beam, status=data.status.value)
+                    record_beam_lifecycle_event(
+                        unit,
+                        beam=beam,
+                        event_type=BeamLifecycleEventType.STATUS_CHANGED,
+                        status_before=status_before,
+                        status_after=beam.status,
+                    )
                 result = beam_to_read(beam)
                 unit.commit()
                 return result
@@ -247,10 +264,24 @@ class BeamService:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
                 beam = get_locked_beam(unit, beam_code, project=project)
+                source_position_id = beam.current_position_id
                 place_beam(
                     unit, beam, position_code,
                     require_unpositioned=require_unpositioned,
                 )
+                if source_position_id != beam.current_position_id:
+                    event_type = (
+                        BeamLifecycleEventType.POSITION_ASSIGNED
+                        if source_position_id is None
+                        else BeamLifecycleEventType.POSITION_MOVED
+                    )
+                    record_beam_lifecycle_event(
+                        unit,
+                        beam=beam,
+                        event_type=event_type,
+                        source_position_id=source_position_id,
+                        target_position_id=beam.current_position_id,
+                    )
                 result = beam_to_read(beam)
                 unit.commit()
                 return result
@@ -268,7 +299,15 @@ class BeamService:
             with self._unit_of_work_factory() as unit:
                 project = resolve_project_scope(unit, project_code)
                 beam = get_locked_beam(unit, beam_code, project=project)
+                source_position_id = beam.current_position_id
                 release_beam(unit, beam)
+                if source_position_id is not None:
+                    record_beam_lifecycle_event(
+                        unit,
+                        beam=beam,
+                        event_type=BeamLifecycleEventType.POSITION_RELEASED,
+                        source_position_id=source_position_id,
+                    )
                 result = beam_to_read(beam)
                 unit.commit()
                 return result

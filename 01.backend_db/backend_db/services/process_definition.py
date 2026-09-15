@@ -10,6 +10,9 @@ from backend_db.crud.process_definition import (
     set_process_definition_active,
     update_process_definition,
 )
+from backend_db.crud.beam_process_execution import (
+    has_beam_process_execution_for_process,
+)
 from backend_db.crud.project import get_project_by_code
 from backend_db.database.unit_of_work import UnitOfWork
 from backend_db.exceptions import (
@@ -17,6 +20,7 @@ from backend_db.exceptions import (
     ProcessDefinitionNotFoundError,
     ProjectNotFoundError,
     ResourceAlreadyExistsError,
+    ResourceConflictError,
 )
 from backend_db.schemas import (
     PageRequest,
@@ -184,7 +188,11 @@ class ProcessDefinitionService:
     ) -> ProcessDefinitionRead:
         try:
             with self._unit_of_work_factory() as unit:
-                item = get_process_definition(unit.session, process_definition_id)
+                item = get_process_definition(
+                    unit.session,
+                    process_definition_id,
+                    for_update=True,
+                )
                 project_scope = resolve_project_scope(unit, project_code)
                 if item is None or not matches_project_scope(
                     item.project_id, project_scope
@@ -203,7 +211,17 @@ class ProcessDefinitionService:
                             )
                         if not project.is_active:
                             raise InactiveResourceError("停用的项目不能关联工序")
-                    changes["project_id"] = project.id if project is not None else None
+                    target_project_id = project.id if project is not None else None
+                    if (
+                        target_project_id != item.project_id
+                        and has_beam_process_execution_for_process(
+                            unit.session, item.id
+                        )
+                    ):
+                        raise ResourceConflictError(
+                            "工序已有执行记录，不能变更项目归属"
+                        )
+                    changes["project_id"] = target_project_id
                     item.project = project
                 if changes:
                     update_process_definition(unit.session, item, changes)

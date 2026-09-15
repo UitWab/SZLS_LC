@@ -58,6 +58,14 @@ class BeamPositionWorkOrderNotFoundError(ResourceNotFoundError):
     code = "beam_position_work_order_not_found"
 
 
+class BeamLifecycleEventNotFoundError(ResourceNotFoundError):
+    code = "beam_lifecycle_event_not_found"
+
+
+class BeamProcessExecutionNotFoundError(ResourceNotFoundError):
+    code = "beam_process_execution_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 

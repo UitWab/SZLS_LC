@@ -46,3 +46,9 @@ dist/
 # Logs
 # ==============================
 *.log
+
+# ==============================
+# Local review / package verification artifacts
+# ==============================
+.tmp_freeze/
+.v6_test_wheel_*/

@@ -3,7 +3,7 @@ from threading import Barrier, Event
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 import backend_db.services.beam_position as beam_position_service_module
 from backend_db.database.mysql import SessionLocal
@@ -18,7 +18,13 @@ from backend_db.exceptions import (
     ResourceConflictError,
     YardAreaNotFoundError,
 )
-from backend_db.models import Beam, BeamPosition, BeamType, YardArea
+from backend_db.models import (
+    Beam,
+    BeamLifecycleEvent,
+    BeamPosition,
+    BeamType,
+    YardArea,
+)
 from backend_db.schemas import (
     BeamCreate,
     BeamFilter,
@@ -48,6 +54,12 @@ def domain_prefix():
     prefix = f"TEST_DOMAIN_{uuid4().hex[:8]}"
     yield prefix
     with SessionLocal.begin() as session:
+        beam_ids = select(Beam.id).where(Beam.beam_code.like(f"{prefix}%"))
+        session.execute(
+            delete(BeamLifecycleEvent).where(
+                BeamLifecycleEvent.beam_id.in_(beam_ids)
+            )
+        )
         session.execute(delete(Beam).where(Beam.beam_code.like(f"{prefix}%")))
         session.execute(
             delete(BeamPosition).where(

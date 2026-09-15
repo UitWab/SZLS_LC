@@ -2,12 +2,12 @@
 
 ## 1. 文档信息
 
-- 数据契约版本：4.0.0
+- 数据契约版本：6.0.0（已本地冻结，尚未推送）
 - Python：3.11 及以上
 - 数据库：MySQL 8.0
 - A 模块包名：`backend_db`
 - B 模块唯一组合入口：`backend_db.interfaces.create_database_services`
-- 当前数据库迁移版本：`a4d7e9f2c105`
+- 当前数据库迁移版本：`d4a6f8b0c217`
 
 本说明定义 A 数据库模块向 B 后端中间件模块提供的 Python 调用契约。B 只依赖公开接口、DTO、枚举和异常，不直接依赖 ORM、CRUD、Session 或表结构实现。
 
@@ -74,6 +74,7 @@ database_services = create_database_services()
 | `yard_areas` | 梁场区域维护、查询和树形结构读取 |
 | `beam_positions` | 梁位维护与占用状态查询 |
 | `position_work_orders` | 梁场内部入位、移位和出位工单 |
+| `beam_events` | 只读梁生命周期历史和游标增量查询 |
 | `beams` | 梁资料、状态和当前梁位管理 |
 
 服务方法为同步 Python 调用。服务集合可以由 B 在应用启动时创建并复用；每次方法调用都会在 A 模块内部创建和关闭数据库 Session。
@@ -91,6 +92,7 @@ database_services = create_database_services()
 - B 不应假设连续多个 Service 调用属于同一个原子事务。
 - 梁位分配、移动、释放及相关占用检查在 A 内部完成并发保护。
 - 梁位工单完成和梁当前位置变更在同一事务中提交或回滚。
+- 梁创建、实际状态变化或梁位变化与对应生命周期事件在同一事务中提交或回滚。
 
 如果未来出现必须跨多个操作保持原子性的业务，应由双方先增加新的 A 层用例接口，而不是让 B 直接控制数据库事务。
 
@@ -159,11 +161,12 @@ result = database_services.beams.list(
 | 梁位 | 项目编码、是否包含全局数据、编码、区域编码、启停状态、占用状态、关键词 |
 | 梁 | 项目编码、是否包含全局数据、编码、梁型、多个状态、当前梁位、区域、是否在梁位、生产日期范围、创建/更新时间范围、关键词 |
 | 梁位工单 | 项目编码、是否包含全局数据、工单编码、梁编码、多个工单类型、多个状态、原梁位、目标梁位、计划时间范围、关键词 |
+| 梁生命周期事件 | 项目编码、梁编码、多个事件类型、发生时间范围 |
 | 操作审计日志 | 项目编码、操作用户ID、操作人名称、动作代码、资源类型、资源编码、结果代码、请求ID、来源、发生时间范围、关键词 |
 
 排序字段必须使用对应的 `*SortField` 枚举，顺序使用 `SortOrder.ASC` 或 `SortOrder.DESC`，不接受 B 传入任意数据库字段名。
 
-当前公开列表使用页码分页。`CursorPageRequest` 和 `CursorPageResult` 只是为后续数字孪生增量同步预留的数据结构，当前 Service 尚未提供游标查询方法。
+除梁生命周期事件外，公开列表使用页码分页。`beam_events.list_after` 使用 `CursorPageRequest(cursor, limit)` 和 `CursorPageResult(items, next_cursor, has_more)`，按事件 ID 升序进行排他游标读取。游标是不透明的 URL-safe Base64 字符串；B 应原样保存并按项目与筛选条件分别维护，不能解析或混用，重试数据按事件 ID 幂等处理。空批次保留传入游标。V5 修复前生成的旧版游标不兼容，部署时应停止旧写入方、完成迁移并统一重启，已有开发游标需重置。
 
 梁型、区域、梁位、梁、梁位工单和工序同时遵循项目作用域规则：
 
@@ -251,7 +254,19 @@ result = database_services.beams.list(
 
 同一根梁最多存在一个 `PENDING` 或 `IN_PROGRESS` 工单。业务字段创建后不可任意修改，公开接口只允许开始、完成或取消；不提供删除接口。B 决定何时创建、开始、完成或取消，不应同时调用 `beams` 的直接梁位操作来重复执行同一工单。
 
-### 8.6 项目 `database_services.projects`
+### 8.6 梁生命周期事件 `database_services.beam_events`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `get(event_id, project_code=...)` | 事件 ID、项目作用域 | `BeamLifecycleEventRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `BeamLifecycleEventFilter` 等 | `PageResult[BeamLifecycleEventSummary]` |
+| `list_after(filters, cursor_request)` | `BeamLifecycleEventFilter`、`CursorPageRequest` | `CursorPageResult[BeamLifecycleEventSummary]` |
+
+事件类型为 `BEAM_CREATED`、`STATUS_CHANGED`、`POSITION_ASSIGNED`、`POSITION_MOVED`、`POSITION_RELEASED`。A 只在梁创建、状态实际变化、直接梁位变化或梁位工单完成时自动追加事件；工单创建、开始、取消，普通梁资料更新和幂等操作不产生事件。工单完成产生的梁位事件通过 `work_order_code` 标明来源。
+
+此服务严格只读，不提供 `record`、`create`、`update`、`delete`、启停或归档。操作人、请求和执行结果仍由 `audit_logs` 记录，生命周期事件不替代操作审计。V5 不提供消息投递、消费确认或 exactly-once 语义。
+
+### 8.7 项目 `database_services.projects`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -264,7 +279,7 @@ result = database_services.beams.list(
 
 V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空，待真实项目编码和数据归属确认后再制定回填与非空迁移。新建项目级梁场数据时必须提供 `project_code`；省略时创建的是兼容 V1 的全局数据。
 
-### 8.7 工序 `database_services.processes`
+### 8.8 工序 `database_services.processes`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -275,9 +290,9 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 | `update(process_definition_id, data, project_code=...)` | ID、`ProcessDefinitionUpdate`、当前项目作用域 | `ProcessDefinitionRead` |
 | `set_active(process_definition_id, is_active=..., project_code=...)` | ID、启停值、项目作用域 | `ProcessDefinitionRead` |
 
-工序可以是平台通用工序，也可以通过可空 `project_code` 归属于具体项目。`include_global=True` 可以在查询项目工序时同时包含通用工序。该 Service 只管理工序基础资料，不实现工序流转、状态机或生产任务编排。
+工序可以是平台通用工序，也可以通过可空 `project_code` 归属于具体项目。`include_global=True` 可以在查询项目工序时同时包含通用工序。工序一旦被执行记录引用，其项目归属不可再修改；名称、排序、备注和启停状态仍可维护。该 Service 只管理工序基础资料，不实现工序流转、状态机或生产任务编排。
 
-### 8.8 用户 `database_services.users`
+### 8.9 用户 `database_services.users`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -291,7 +306,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 普通用户 DTO 永远不包含密码散列。`UserAuthRecord` 只供 B 的登录校验流程使用，不应作为普通 HTTP 响应返回。
 
-### 8.9 角色与权限 `database_services.access_control`
+### 8.10 角色与权限 `database_services.access_control`
 
 角色和权限目录：
 
@@ -312,7 +327,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 角色分为 `SYSTEM` 和 `PROJECT` 两种范围。A 会拒绝把项目角色分配为系统角色，也会拒绝把系统角色分配给项目成员。分配和撤销操作均为幂等操作。停用成员仍允许撤销已有项目角色；撤销后的角色不会在成员重新启用时恢复。停用角色、权限或项目成员后，有效权限查询会自动排除对应权限。
 
-### 8.10 操作审计日志 `database_services.audit_logs`
+### 8.11 操作审计日志 `database_services.audit_logs`
 
 | 方法 | 输入 | 返回 |
 | --- | --- | --- |
@@ -325,6 +340,23 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 审计查询必须通过 `OperationAuditLogScope` 显式声明范围：`SYSTEM` 仅查询 `project_id IS NULL` 的系统级日志；`PROJECT` 必须提供 `project_code` 并仅查询该项目；`ALL` 查询系统级及全部项目日志。`SYSTEM`、`ALL` 不允许携带 `project_code`。项目接口应始终使用 `PROJECT`；B 只有完成系统级权限判断后才能调用 `ALL`。A 不实现登录或接口鉴权。
 
 审计记录不得包含密码明文、密码散列、JWT、Session令牌、Cookie、数据库连接串、完整请求头或完整请求体。`request_id` 只用于追踪，不具有幂等或唯一语义。
+
+### 8.12 梁工序执行记录 `database_services.process_records`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `record(data)` | `BeamProcessExecutionCreate` | `BeamProcessExecutionRead` |
+| `get(execution_code, project_code=...)` | 执行编码、项目作用域 | `BeamProcessExecutionRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `BeamProcessExecutionFilter` 等 | `PageResult[BeamProcessExecutionSummary]` |
+| `void(execution_code, data, project_code=...)` | 执行编码、`BeamProcessExecutionVoid`、项目作用域 | `BeamProcessExecutionRead` |
+
+该接口只保存已经结束的工序执行事实。`result_code` 使用 `SUCCESS`、`FAILED`、`ABORTED`；`source` 使用 `MANUAL`、`SYSTEM`、`IMPORT`、`DEVICE`。开始和结束时间均由 B 提供 UTC 业务时间，结束时间不得早于开始时间。同一梁可以多次执行同一道工序，A 不校验工序顺序。
+
+项目梁可以使用同项目工序或平台通用工序；全局梁只能使用通用工序。停用项目或停用工序不能创建新记录，已有历史仍可查询和作废。操作人用户 ID 和名称至少提供一个；只提供用户 ID 时，A 保存当前显示名称快照。用户是系统级资源，A 在此只校验用户存在性，项目成员身份与权限由 B 校验。
+
+`execution_code` 全局唯一。提供 `external_record_id` 时，`source + external_record_id` 构成外部幂等键：相同请求返回既有记录，内容不同返回 `ResourceConflictError`。错误记录只能通过 `void` 作废后重新创建；新记录可用 `supersedes_execution_code` 关联被纠正记录。重复作废返回首次作废结果，不覆盖首次原因和操作人。
+
+V6 不提供 `update`、`delete`、`start` 或 `complete`，也不自动修改梁状态、不追加生命周期事件、不自动写操作审计。鉴权、排程、放行、状态联动和 HTTP 接口属于 B。
 
 ## 9. 梁状态契约
 
@@ -349,7 +381,7 @@ COMPLETED
 
 B 保存、传输和判断时必须使用英文编码，中文标签只用于显示。状态集合后续可能新增或废弃，B 不应使用数组下标、固定数量或数据库枚举定义来判断状态。
 
-当前 A 只校验状态是否属于已知编码，不执行状态机顺序校验，也不记录状态变更历史；相关业务规则需要双方后续确认后扩展 A 的数据契约。
+当前 A 只校验状态是否属于已知编码，不执行状态机顺序或岗位授权校验。V5 会在状态实际变化时自动追加历史事件；允许哪些状态迁移、由谁操作仍属于 B 或后续双方确认的业务规则。
 
 ## 10. 异常契约
 
@@ -370,6 +402,8 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `ProcessDefinitionNotFoundError` | `process_definition_not_found` | 工序定义不存在 |
 | `OperationAuditLogNotFoundError` | `operation_audit_log_not_found` | 操作审计日志不存在 |
 | `BeamPositionWorkOrderNotFoundError` | `beam_position_work_order_not_found` | 梁位工单不存在或不属于当前项目 |
+| `BeamLifecycleEventNotFoundError` | `beam_lifecycle_event_not_found` | 梁生命周期事件不存在或不属于当前项目 |
+| `BeamProcessExecutionNotFoundError` | `beam_process_execution_not_found` | 梁工序执行记录不存在或不属于当前项目 |
 | `ResourceConflictError` | `resource_conflict` | 资源状态冲突的公共父类 |
 | `ResourceAlreadyExistsError` | `resource_already_exists` | 唯一编码已存在 |
 | `PositionOccupiedError` | `position_occupied` | 目标梁位被占用 |
@@ -377,7 +411,7 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `InvalidAreaHierarchyError` | `invalid_area_hierarchy` | 区域层级不合法 |
 | `InvalidDataError` | `invalid_data` | 数据不满足规则的公共父类 |
 | `InvalidBeamStatusError` | `invalid_beam_status` | 梁状态不合法 |
-| `InactiveResourceError` | `inactive_resource` | 引用的区域、梁位或梁型未启用 |
+| `InactiveResourceError` | `inactive_resource` | 引用的项目、工序、区域、梁位或梁型未启用 |
 | `DatabaseUnavailableError` | `database_unavailable` | 数据库访问失败 |
 
 DTO 构造阶段还可能抛出 Pydantic 的 `ValidationError`。该错误属于 B 接收和转换输入时需要处理的参数校验错误。
@@ -409,7 +443,9 @@ B 可以基于 V3 契约在业务操作完成后显式调用 `audit_logs.record`
 
 B 可以基于 V4 契约开发梁位工单的 HTTP/消息适配与权限判断。A 只实现梁场内部 `PLACE`、`MOVE`、`RELEASE` 数据用例，不实现调度算法、审批、派工、设备控制或页面流程。
 
-B 不应假设当前已经具备以下数据能力：生产或质量任务编排、二维码/RFID 独立身份、质量记录、状态历史、运输记录、设备、告警和增量同步。这些能力需要业务口径确认后再扩展 A 的模型与契约。
+B 可以基于 V6 契约开发工序执行结果的 HTTP/消息适配、输入权限判断和生产履历展示，并通过 `process_records` 记录、读取、筛选或受控作废。B 不应把该记录当作进行中任务或生产排程。
+
+B 不应假设当前已经具备以下数据能力：生产或质量任务编排、二维码/RFID 独立身份、质量记录、运输记录、设备、告警以及通用数据同步或消息投递。V5 已提供梁状态和梁位变化历史及其只读增量查询，V6 提供已经结束的工序执行记录；其余能力需要业务口径确认后再扩展 A 的模型与契约。
 
 ## 12. 联调与版本规则
 

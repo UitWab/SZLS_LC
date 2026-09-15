@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smart-beam-twin-backend-db"
-version = "4.0.0"
+version = "6.0.0"
 description = "Database access package for the Smart Beam Twin platform"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -8,6 +8,8 @@ def create_database_services() -> DatabaseServices:
         AccessControlService,
         BeamPositionService,
         BeamPositionWorkOrderService,
+        BeamLifecycleEventService,
+        BeamProcessExecutionService,
         BeamService,
         BeamTypeService,
         ProjectService,
@@ -27,5 +29,7 @@ def create_database_services() -> DatabaseServices:
         yard_areas=YardAreaService(),
         beam_positions=BeamPositionService(),
         position_work_orders=BeamPositionWorkOrderService(),
+        beam_events=BeamLifecycleEventService(),
+        process_records=BeamProcessExecutionService(),
         beams=BeamService(),
     )
