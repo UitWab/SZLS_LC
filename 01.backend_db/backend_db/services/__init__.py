@@ -9,6 +9,7 @@ from backend_db.services.operation_audit_log import OperationAuditLogService
 from backend_db.services.beam_position_work_order import BeamPositionWorkOrderService
 from backend_db.services.beam_lifecycle_event import BeamLifecycleEventService
 from backend_db.services.beam_process_execution import BeamProcessExecutionService
+from backend_db.services.beam_quality_inspection import BeamQualityInspectionService
 
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "BeamPositionWorkOrderService",
     "BeamLifecycleEventService",
     "BeamProcessExecutionService",
+    "BeamQualityInspectionService",
 ]

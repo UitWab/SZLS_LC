@@ -2,12 +2,12 @@
 
 ## 1. 文档信息
 
-- 数据契约版本：6.0.0（已本地冻结，尚未推送）
+- 数据契约版本：7.0.0（开发完成，待独立测试、审计与冻结）
 - Python：3.11 及以上
 - 数据库：MySQL 8.0
 - A 模块包名：`backend_db`
 - B 模块唯一组合入口：`backend_db.interfaces.create_database_services`
-- 当前数据库迁移版本：`d4a6f8b0c217`
+- 当前数据库迁移版本：`e7b9c1d3f605`
 
 本说明定义 A 数据库模块向 B 后端中间件模块提供的 Python 调用契约。B 只依赖公开接口、DTO、枚举和异常，不直接依赖 ORM、CRUD、Session 或表结构实现。
 
@@ -75,6 +75,8 @@ database_services = create_database_services()
 | `beam_positions` | 梁位维护与占用状态查询 |
 | `position_work_orders` | 梁场内部入位、移位和出位工单 |
 | `beam_events` | 只读梁生命周期历史和游标增量查询 |
+| `process_records` | 已结束梁工序执行事实和受控作废 |
+| `quality_records` | 质量检查事实、检查项、复检和受控作废 |
 | `beams` | 梁资料、状态和当前梁位管理 |
 
 服务方法为同步 Python 调用。服务集合可以由 B 在应用启动时创建并复用；每次方法调用都会在 A 模块内部创建和关闭数据库 Session。
@@ -162,6 +164,8 @@ result = database_services.beams.list(
 | 梁 | 项目编码、是否包含全局数据、编码、梁型、多个状态、当前梁位、区域、是否在梁位、生产日期范围、创建/更新时间范围、关键词 |
 | 梁位工单 | 项目编码、是否包含全局数据、工单编码、梁编码、多个工单类型、多个状态、原梁位、目标梁位、计划时间范围、关键词 |
 | 梁生命周期事件 | 项目编码、梁编码、多个事件类型、发生时间范围 |
+| 梁工序执行记录 | 项目、梁、工序、结果、来源、时间、作废、修正和关键词 |
+| 质量检查记录 | 项目、梁、工序、执行记录、检查类型、结果、来源、时间、复检、作废和关键词 |
 | 操作审计日志 | 项目编码、操作用户ID、操作人名称、动作代码、资源类型、资源编码、结果代码、请求ID、来源、发生时间范围、关键词 |
 
 排序字段必须使用对应的 `*SortField` 枚举，顺序使用 `SortOrder.ASC` 或 `SortOrder.DESC`，不接受 B 传入任意数据库字段名。
@@ -290,7 +294,7 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 | `update(process_definition_id, data, project_code=...)` | ID、`ProcessDefinitionUpdate`、当前项目作用域 | `ProcessDefinitionRead` |
 | `set_active(process_definition_id, is_active=..., project_code=...)` | ID、启停值、项目作用域 | `ProcessDefinitionRead` |
 
-工序可以是平台通用工序，也可以通过可空 `project_code` 归属于具体项目。`include_global=True` 可以在查询项目工序时同时包含通用工序。工序一旦被执行记录引用，其项目归属不可再修改；名称、排序、备注和启停状态仍可维护。该 Service 只管理工序基础资料，不实现工序流转、状态机或生产任务编排。
+工序可以是平台通用工序，也可以通过可空 `project_code` 归属于具体项目。`include_global=True` 可以在查询项目工序时同时包含通用工序。工序一旦被执行记录或质量记录引用，其项目归属不可再修改；名称、排序、备注和启停状态仍可维护。该 Service 只管理工序基础资料，不实现工序流转、状态机或生产任务编排。
 
 ### 8.9 用户 `database_services.users`
 
@@ -358,6 +362,23 @@ V2 不生成默认项目。既有梁场数据的 `project_id` 暂时允许为空
 
 V6 不提供 `update`、`delete`、`start` 或 `complete`，也不自动修改梁状态、不追加生命周期事件、不自动写操作审计。鉴权、排程、放行、状态联动和 HTTP 接口属于 B。
 
+### 8.13 质量检查记录 `database_services.quality_records`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `record(data)` | `BeamQualityInspectionCreate` | `BeamQualityInspectionRead` |
+| `get(inspection_code, project_code=...)` | 检查编码、项目作用域 | `BeamQualityInspectionRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `BeamQualityInspectionFilter` 等 | `PageResult[BeamQualityInspectionSummary]` |
+| `void(inspection_code, data, project_code=...)` | 检查编码、`BeamQualityInspectionVoid`、项目作用域 | `BeamQualityInspectionRead` |
+
+质量记录保存一次独立检查或验收事实。整体结果使用 `PASS`、`FAIL`；检查项结果使用 `PASS`、`FAIL`、`NOT_APPLICABLE`。检查项可为空；存在失败检查项时整体结果不能为 `PASS`。主记录和检查项在同一事务中创建。`item_code` 是区分大小写的精确编码，B 不应自行改变其大小写。
+
+质量记录可只关联工序，也可通过 `process_execution_code` 关联 V6 执行记录。关联执行记录时项目和梁必须一致，工序由执行记录确定或与显式 `process_code` 一致。已作废执行记录不能用于新建质量记录，执行记录以后作废不会自动改变既有质量历史。
+
+复检通过 `previous_inspection_code` 关联同项目同一梁的既有记录；允许同一记录产生多个复检分支。`inspection_code` 全局唯一，`source + external_record_id` 是可选外部幂等键，检查项顺序不参与幂等内容比较。
+
+V7 不提供普通更新、物理删除、审批、放行、附件或任意结果修改，也不自动改变梁状态、追加生命周期事件或写操作审计。B 负责权限、业务流程和 HTTP 适配。
+
 ## 9. 梁状态契约
 
 梁状态从 `backend_db.schemas.BeamStatus` 导入。当前 14 个稳定编码为：
@@ -404,6 +425,7 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `BeamPositionWorkOrderNotFoundError` | `beam_position_work_order_not_found` | 梁位工单不存在或不属于当前项目 |
 | `BeamLifecycleEventNotFoundError` | `beam_lifecycle_event_not_found` | 梁生命周期事件不存在或不属于当前项目 |
 | `BeamProcessExecutionNotFoundError` | `beam_process_execution_not_found` | 梁工序执行记录不存在或不属于当前项目 |
+| `BeamQualityInspectionNotFoundError` | `beam_quality_inspection_not_found` | 质量检查记录不存在或不属于当前项目 |
 | `ResourceConflictError` | `resource_conflict` | 资源状态冲突的公共父类 |
 | `ResourceAlreadyExistsError` | `resource_already_exists` | 唯一编码已存在 |
 | `PositionOccupiedError` | `position_occupied` | 目标梁位被占用 |
@@ -445,7 +467,9 @@ B 可以基于 V4 契约开发梁位工单的 HTTP/消息适配与权限判断�
 
 B 可以基于 V6 契约开发工序执行结果的 HTTP/消息适配、输入权限判断和生产履历展示，并通过 `process_records` 记录、读取、筛选或受控作废。B 不应把该记录当作进行中任务或生产排程。
 
-B 不应假设当前已经具备以下数据能力：生产或质量任务编排、二维码/RFID 独立身份、质量记录、运输记录、设备、告警以及通用数据同步或消息投递。V5 已提供梁状态和梁位变化历史及其只读增量查询，V6 提供已经结束的工序执行记录；其余能力需要业务口径确认后再扩展 A 的模型与契约。
+B 可以基于 V7 契约开发质量检查录入、履历展示和权限适配，并通过 `quality_records` 记录、读取、筛选或受控作废。审批、签章、附件、放行和不合格处置流程仍属于 B 或后续独立契约。
+
+B 不应假设当前已经具备以下数据能力：生产或质量任务编排、二维码/RFID 独立身份、运输记录、设备、告警以及通用数据同步或消息投递。V5 已提供梁状态和梁位变化历史，V6 提供已经结束的工序执行记录，V7 提供质量检查事实；其余能力需要业务口径确认后再扩展 A 的模型与契约。
 
 ## 12. 联调与版本规则
 

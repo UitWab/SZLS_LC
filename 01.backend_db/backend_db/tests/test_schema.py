@@ -62,6 +62,8 @@ def test_core_tables_exist():
         "beam_lifecycle_event",
         "beam_lifecycle_event_stream_lock",
         "beam_process_execution",
+        "beam_quality_inspection",
+        "beam_quality_inspection_item",
         "user_credential",
         "yard_area",
         "beam_type",
@@ -364,6 +366,93 @@ def test_beam_process_execution_schema():
     assert indexes["ix_beam_process_execution_process_finished_id"] == (
         "process_definition_id", "finished_at", "id"
     )
+
+
+def test_beam_quality_inspection_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_quality_inspection")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "inspection_code",
+        "beam_id",
+        "process_definition_id",
+        "process_execution_id",
+        "previous_inspection_id",
+        "inspection_type_code",
+        "result_code",
+        "inspected_at",
+        "actor_user_id",
+        "actor_name",
+        "source",
+        "external_record_id",
+        "summary",
+        "is_voided",
+        "voided_at",
+        "voided_by_user_id",
+        "voided_by_name",
+        "void_reason",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["process_definition_id"]["nullable"] is True
+    assert columns["process_execution_id"]["nullable"] is True
+    assert _foreign_keys(inspector, "beam_quality_inspection") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "process_definition_id": "process_definition",
+        "process_execution_id": "beam_process_execution",
+        "previous_inspection_id": "beam_quality_inspection",
+        "actor_user_id": "app_user",
+        "voided_by_user_id": "app_user",
+    }
+    unique_columns = _unique_columns(inspector, "beam_quality_inspection")
+    assert ("inspection_code",) in unique_columns
+    assert ("source", "external_record_id") in unique_columns
+    check_names = {
+        item["name"]
+        for item in inspector.get_check_constraints("beam_quality_inspection")
+    }
+    assert "ck_beam_quality_inspection_void_fields" in check_names
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("beam_quality_inspection")
+    }
+    assert indexes["ix_beam_quality_inspection_project_inspected_id"] == (
+        "project_id", "inspected_at", "id"
+    )
+    assert indexes["ix_beam_quality_inspection_beam_inspected_id"] == (
+        "beam_id", "inspected_at", "id"
+    )
+    assert indexes["ix_beam_quality_inspection_process_inspected_id"] == (
+        "process_definition_id", "inspected_at", "id"
+    )
+
+    item_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_quality_inspection_item")
+    }
+    assert set(item_columns) == {
+        "id",
+        "inspection_id",
+        "item_code",
+        "item_name",
+        "requirement_text",
+        "observed_value",
+        "unit",
+        "result_code",
+        "remark",
+    }
+    assert _foreign_keys(inspector, "beam_quality_inspection_item") == {
+        "inspection_id": "beam_quality_inspection"
+    }
+    assert (
+        "inspection_id", "item_code"
+    ) in _unique_columns(inspector, "beam_quality_inspection_item")
 
 
 def test_yard_area_schema():

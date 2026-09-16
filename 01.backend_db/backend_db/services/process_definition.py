@@ -13,6 +13,9 @@ from backend_db.crud.process_definition import (
 from backend_db.crud.beam_process_execution import (
     has_beam_process_execution_for_process,
 )
+from backend_db.crud.beam_quality_inspection import (
+    has_beam_quality_inspection_for_process,
+)
 from backend_db.crud.project import get_project_by_code
 from backend_db.database.unit_of_work import UnitOfWork
 from backend_db.exceptions import (
@@ -212,14 +215,15 @@ class ProcessDefinitionService:
                         if not project.is_active:
                             raise InactiveResourceError("停用的项目不能关联工序")
                     target_project_id = project.id if project is not None else None
-                    if (
-                        target_project_id != item.project_id
-                        and has_beam_process_execution_for_process(
+                    project_changed = target_project_id != item.project_id
+                    if project_changed and (
+                        has_beam_process_execution_for_process(unit.session, item.id)
+                        or has_beam_quality_inspection_for_process(
                             unit.session, item.id
                         )
                     ):
                         raise ResourceConflictError(
-                            "工序已有执行记录，不能变更项目归属"
+                            "工序已有执行或质量记录，不能变更项目归属"
                         )
                     changes["project_id"] = target_project_id
                     item.project = project

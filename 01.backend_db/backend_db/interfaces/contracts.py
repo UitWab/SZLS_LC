@@ -28,6 +28,12 @@ from backend_db.schemas import (
     BeamProcessExecutionSortField,
     BeamProcessExecutionSummary,
     BeamProcessExecutionVoid,
+    BeamQualityInspectionCreate,
+    BeamQualityInspectionFilter,
+    BeamQualityInspectionRead,
+    BeamQualityInspectionSortField,
+    BeamQualityInspectionSummary,
+    BeamQualityInspectionVoid,
     BeamRead,
     BeamSortField,
     BeamStatusChange,
@@ -429,6 +435,34 @@ class BeamProcessExecutionServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class BeamQualityInspectionServiceProtocol(Protocol):
+    def record(
+        self, data: BeamQualityInspectionCreate
+    ) -> BeamQualityInspectionRead: ...
+    def get(
+        self,
+        inspection_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamQualityInspectionRead: ...
+    def list(
+        self,
+        filters: BeamQualityInspectionFilter | None = None,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: BeamQualityInspectionSortField = BeamQualityInspectionSortField.INSPECTED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[BeamQualityInspectionSummary]: ...
+    def void(
+        self,
+        inspection_code: str,
+        data: BeamQualityInspectionVoid,
+        *,
+        project_code: str | None = None,
+    ) -> BeamQualityInspectionRead: ...
+
+
+@runtime_checkable
 class BeamServiceProtocol(Protocol):
     def create(self, data: BeamCreate) -> BeamRead: ...
     def get(self, beam_id: int, *, project_code: str | None = None) -> BeamRead: ...
@@ -487,4 +521,5 @@ class DatabaseServices:
     position_work_orders: BeamPositionWorkOrderServiceProtocol
     beam_events: BeamLifecycleEventServiceProtocol
     process_records: BeamProcessExecutionServiceProtocol
+    quality_records: BeamQualityInspectionServiceProtocol
     beams: BeamServiceProtocol

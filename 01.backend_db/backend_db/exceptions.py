@@ -66,6 +66,10 @@ class BeamProcessExecutionNotFoundError(ResourceNotFoundError):
     code = "beam_process_execution_not_found"
 
 
+class BeamQualityInspectionNotFoundError(ResourceNotFoundError):
+    code = "beam_quality_inspection_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 

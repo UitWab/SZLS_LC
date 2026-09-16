@@ -15,6 +15,10 @@ from backend_db.models.operation_audit_log import OperationAuditLog
 from backend_db.models.beam_position_work_order import BeamPositionWorkOrder
 from backend_db.models.beam_lifecycle_event import BeamLifecycleEvent
 from backend_db.models.beam_process_execution import BeamProcessExecution
+from backend_db.models.beam_quality_inspection import (
+    BeamQualityInspection,
+    BeamQualityInspectionItem,
+)
 from backend_db.models.yard_area import YardArea
 from backend_db.models.beam_type import BeamType
 from backend_db.models.beam_position import BeamPosition
@@ -37,6 +41,8 @@ __all__ = [
     "BeamPositionWorkOrder",
     "BeamLifecycleEvent",
     "BeamProcessExecution",
+    "BeamQualityInspection",
+    "BeamQualityInspectionItem",
     "YardArea",
     "BeamType",
     "BeamPosition",

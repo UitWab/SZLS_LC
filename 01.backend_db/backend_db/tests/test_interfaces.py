@@ -6,6 +6,8 @@ from backend_db.interfaces import (
     BeamPositionServiceProtocol,
     BeamPositionWorkOrderServiceProtocol,
     BeamLifecycleEventServiceProtocol,
+    BeamProcessExecutionServiceProtocol,
+    BeamQualityInspectionServiceProtocol,
     BeamServiceProtocol,
     BeamTypeServiceProtocol,
     ProjectServiceProtocol,
@@ -30,6 +32,8 @@ def test_public_factory_returns_all_service_contracts():
     assert isinstance(services.beam_positions, BeamPositionServiceProtocol)
     assert isinstance(services.position_work_orders, BeamPositionWorkOrderServiceProtocol)
     assert isinstance(services.beam_events, BeamLifecycleEventServiceProtocol)
+    assert isinstance(services.process_records, BeamProcessExecutionServiceProtocol)
+    assert isinstance(services.quality_records, BeamQualityInspectionServiceProtocol)
     assert isinstance(services.beams, BeamServiceProtocol)
 
 
@@ -96,6 +100,8 @@ def test_public_protocol_annotations_can_be_resolved():
         BeamPositionServiceProtocol,
         BeamPositionWorkOrderServiceProtocol,
         BeamLifecycleEventServiceProtocol,
+        BeamProcessExecutionServiceProtocol,
+        BeamQualityInspectionServiceProtocol,
         BeamServiceProtocol,
     )
 

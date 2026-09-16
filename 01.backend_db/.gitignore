@@ -52,3 +52,4 @@ dist/
 # ==============================
 .tmp_freeze/
 .v6_test_wheel_*/
+.v7_test_wheel_*/
