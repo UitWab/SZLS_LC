@@ -34,6 +34,12 @@ from backend_db.schemas import (
     BeamQualityInspectionSortField,
     BeamQualityInspectionSummary,
     BeamQualityInspectionVoid,
+    BeamTransportHandoverCreate,
+    BeamTransportHandoverFilter,
+    BeamTransportHandoverRead,
+    BeamTransportHandoverSortField,
+    BeamTransportHandoverSummary,
+    BeamTransportHandoverVoid,
     BeamRead,
     BeamSortField,
     BeamStatusChange,
@@ -463,6 +469,34 @@ class BeamQualityInspectionServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class BeamTransportHandoverServiceProtocol(Protocol):
+    def record(
+        self, data: BeamTransportHandoverCreate
+    ) -> BeamTransportHandoverRead: ...
+    def get(
+        self,
+        handover_code: str,
+        *,
+        project_code: str | None = None,
+    ) -> BeamTransportHandoverRead: ...
+    def list(
+        self,
+        filters: BeamTransportHandoverFilter | None = None,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: BeamTransportHandoverSortField = BeamTransportHandoverSortField.OCCURRED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[BeamTransportHandoverSummary]: ...
+    def void(
+        self,
+        handover_code: str,
+        data: BeamTransportHandoverVoid,
+        *,
+        project_code: str | None = None,
+    ) -> BeamTransportHandoverRead: ...
+
+
+@runtime_checkable
 class BeamServiceProtocol(Protocol):
     def create(self, data: BeamCreate) -> BeamRead: ...
     def get(self, beam_id: int, *, project_code: str | None = None) -> BeamRead: ...
@@ -522,4 +556,5 @@ class DatabaseServices:
     beam_events: BeamLifecycleEventServiceProtocol
     process_records: BeamProcessExecutionServiceProtocol
     quality_records: BeamQualityInspectionServiceProtocol
+    transport_records: BeamTransportHandoverServiceProtocol
     beams: BeamServiceProtocol

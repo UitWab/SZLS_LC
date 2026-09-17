@@ -10,6 +10,7 @@ from backend_db.services.beam_position_work_order import BeamPositionWorkOrderSe
 from backend_db.services.beam_lifecycle_event import BeamLifecycleEventService
 from backend_db.services.beam_process_execution import BeamProcessExecutionService
 from backend_db.services.beam_quality_inspection import BeamQualityInspectionService
+from backend_db.services.beam_transport_handover import BeamTransportHandoverService
 
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "BeamLifecycleEventService",
     "BeamProcessExecutionService",
     "BeamQualityInspectionService",
+    "BeamTransportHandoverService",
 ]

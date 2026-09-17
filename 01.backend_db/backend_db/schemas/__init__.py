@@ -95,6 +95,16 @@ from backend_db.schemas.beam_quality_inspection import (
     BeamQualityItemResult,
     BeamQualityResult,
 )
+from backend_db.schemas.beam_transport_handover import (
+    BeamTransportHandoverCreate,
+    BeamTransportHandoverFilter,
+    BeamTransportHandoverRead,
+    BeamTransportHandoverSortField,
+    BeamTransportHandoverSummary,
+    BeamTransportHandoverVoid,
+    TransportHandoverResult,
+    TransportHandoverType,
+)
 from backend_db.schemas.identity import (
     PasswordHashUpdate,
     EffectivePermissionSet,
@@ -208,6 +218,14 @@ __all__ = [
     "BeamQualityInspectionVoid",
     "BeamQualityItemResult",
     "BeamQualityResult",
+    "BeamTransportHandoverCreate",
+    "BeamTransportHandoverFilter",
+    "BeamTransportHandoverRead",
+    "BeamTransportHandoverSortField",
+    "BeamTransportHandoverSummary",
+    "BeamTransportHandoverVoid",
+    "TransportHandoverResult",
+    "TransportHandoverType",
     "PasswordHashUpdate",
     "EffectivePermissionSet",
     "PermissionCreate",

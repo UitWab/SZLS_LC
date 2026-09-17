@@ -455,6 +455,68 @@ def test_beam_quality_inspection_schema():
     ) in _unique_columns(inspector, "beam_quality_inspection_item")
 
 
+def test_beam_transport_handover_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("beam_transport_handover")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "handover_code",
+        "beam_id",
+        "handover_type",
+        "result_code",
+        "from_location",
+        "to_location",
+        "carrier_name",
+        "vehicle_no",
+        "sender_name",
+        "receiver_name",
+        "occurred_at",
+        "actor_user_id",
+        "actor_name",
+        "source",
+        "external_record_id",
+        "remark",
+        "is_voided",
+        "voided_at",
+        "voided_by_user_id",
+        "voided_by_name",
+        "void_reason",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is True
+    assert columns["handover_code"]["nullable"] is False
+    assert columns["beam_id"]["nullable"] is False
+    assert _foreign_keys(inspector, "beam_transport_handover") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "actor_user_id": "app_user",
+        "voided_by_user_id": "app_user",
+    }
+    unique_columns = _unique_columns(inspector, "beam_transport_handover")
+    assert ("handover_code",) in unique_columns
+    assert ("source", "external_record_id") in unique_columns
+    check_names = {
+        item["name"]
+        for item in inspector.get_check_constraints("beam_transport_handover")
+    }
+    assert "ck_beam_transport_handover_void_fields" in check_names
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("beam_transport_handover")
+    }
+    assert indexes["ix_beam_transport_handover_project_occurred_id"] == (
+        "project_id", "occurred_at", "id"
+    )
+    assert indexes["ix_beam_transport_handover_beam_occurred_id"] == (
+        "beam_id", "occurred_at", "id"
+    )
+
+
 def test_yard_area_schema():
     inspector = inspect(engine)
 

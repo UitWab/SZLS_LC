@@ -11,6 +11,7 @@ def create_database_services() -> DatabaseServices:
         BeamLifecycleEventService,
         BeamProcessExecutionService,
         BeamQualityInspectionService,
+        BeamTransportHandoverService,
         BeamService,
         BeamTypeService,
         ProjectService,
@@ -33,5 +34,6 @@ def create_database_services() -> DatabaseServices:
         beam_events=BeamLifecycleEventService(),
         process_records=BeamProcessExecutionService(),
         quality_records=BeamQualityInspectionService(),
+        transport_records=BeamTransportHandoverService(),
         beams=BeamService(),
     )

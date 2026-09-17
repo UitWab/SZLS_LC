@@ -19,6 +19,7 @@ from backend_db.models.beam_quality_inspection import (
     BeamQualityInspection,
     BeamQualityInspectionItem,
 )
+from backend_db.models.beam_transport_handover import BeamTransportHandover
 from backend_db.models.yard_area import YardArea
 from backend_db.models.beam_type import BeamType
 from backend_db.models.beam_position import BeamPosition
@@ -43,6 +44,7 @@ __all__ = [
     "BeamProcessExecution",
     "BeamQualityInspection",
     "BeamQualityInspectionItem",
+    "BeamTransportHandover",
     "YardArea",
     "BeamType",
     "BeamPosition",

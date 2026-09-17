@@ -70,6 +70,10 @@ class BeamQualityInspectionNotFoundError(ResourceNotFoundError):
     code = "beam_quality_inspection_not_found"
 
 
+class BeamTransportHandoverNotFoundError(ResourceNotFoundError):
+    code = "beam_transport_handover_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 
