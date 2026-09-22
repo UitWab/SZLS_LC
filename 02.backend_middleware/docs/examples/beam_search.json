@@ -1,0 +1,6 @@
+{
+  "filters": {"statuses": ["CURING", "STORED"]},
+  "pagination": {"page": 1, "page_size": 20, "include_total": true},
+  "sort_by": "id",
+  "sort_order": "asc"
+}

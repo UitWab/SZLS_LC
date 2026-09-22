@@ -1,0 +1,11 @@
+{
+  "handover_code": "DEMO-H001",
+  "beam_code": "DEMO-B001",
+  "handover_type": "OUTBOUND",
+  "result_code": "ACCEPTED",
+  "from_location": "存梁区",
+  "to_location": "架设现场",
+  "vehicle_no": "DEMO-TRUCK001",
+  "occurred_at": "2026-09-22T08:00:00Z",
+  "actor_name": "联调交接员"
+}

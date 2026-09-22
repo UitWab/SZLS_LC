@@ -1,0 +1,11 @@
+{
+  "execution_code": "DEMO-EX001",
+  "beam_code": "DEMO-B001",
+  "process_code": "DEMO-CURING",
+  "result_code": "SUCCESS",
+  "started_at": "2026-09-22T07:00:00Z",
+  "finished_at": "2026-09-22T08:00:00Z",
+  "actor_name": "PLC001",
+  "source": "DEVICE",
+  "external_record_id": "PLC001-process-000001"
+}

@@ -1,0 +1,228 @@
+{
+  "database_contract": "8.0.0",
+  "enums": {
+    "BeamStatus": [
+      "UNPRODUCED",
+      "REBAR_BINDING",
+      "REBAR_CHECK",
+      "FORMWORK_CHECK",
+      "CONCRETE_CASTING",
+      "CURING",
+      "TENSION_GROUTING",
+      "QUALITY_ACCEPTED",
+      "STORED",
+      "READY_TO_SHIP",
+      "TRANSPORTING",
+      "ARRIVED",
+      "ERECTING",
+      "COMPLETED"
+    ],
+    "BeamSortField": [
+      "id",
+      "beam_code",
+      "beam_name",
+      "status",
+      "production_date",
+      "created_at",
+      "updated_at"
+    ],
+    "BeamPositionSortField": [
+      "id",
+      "position_code",
+      "position_name",
+      "created_at",
+      "updated_at"
+    ],
+    "BeamTypeSortField": [
+      "id",
+      "type_code",
+      "type_name",
+      "created_at",
+      "updated_at"
+    ],
+    "ProjectSortField": [
+      "id",
+      "project_code",
+      "project_name",
+      "created_at",
+      "updated_at"
+    ],
+    "ProcessDefinitionSortField": [
+      "id",
+      "process_code",
+      "process_name",
+      "sort_order",
+      "created_at",
+      "updated_at"
+    ],
+    "OperationAuditLogScope": [
+      "SYSTEM",
+      "PROJECT",
+      "ALL"
+    ],
+    "OperationAuditLogSortField": [
+      "id",
+      "action_code",
+      "resource_type",
+      "occurred_at",
+      "created_at"
+    ],
+    "BeamPositionWorkOrderSortField": [
+      "id",
+      "work_order_code",
+      "status",
+      "planned_at",
+      "created_at",
+      "updated_at"
+    ],
+    "BeamPositionWorkOrderStatus": [
+      "PENDING",
+      "IN_PROGRESS",
+      "COMPLETED",
+      "CANCELED"
+    ],
+    "BeamPositionWorkOrderType": [
+      "PLACE",
+      "MOVE",
+      "RELEASE"
+    ],
+    "BeamLifecycleEventSortField": [
+      "id",
+      "event_type",
+      "occurred_at",
+      "created_at"
+    ],
+    "BeamLifecycleEventType": [
+      "BEAM_CREATED",
+      "STATUS_CHANGED",
+      "POSITION_ASSIGNED",
+      "POSITION_MOVED",
+      "POSITION_RELEASED"
+    ],
+    "BeamProcessExecutionSortField": [
+      "id",
+      "execution_code",
+      "result_code",
+      "started_at",
+      "finished_at",
+      "created_at"
+    ],
+    "BeamProcessResult": [
+      "SUCCESS",
+      "FAILED",
+      "ABORTED"
+    ],
+    "RecordSource": [
+      "MANUAL",
+      "SYSTEM",
+      "IMPORT",
+      "DEVICE"
+    ],
+    "BeamQualityInspectionSortField": [
+      "id",
+      "inspection_code",
+      "inspection_type_code",
+      "result_code",
+      "inspected_at",
+      "created_at"
+    ],
+    "BeamQualityItemResult": [
+      "PASS",
+      "FAIL",
+      "NOT_APPLICABLE"
+    ],
+    "BeamQualityResult": [
+      "PASS",
+      "FAIL"
+    ],
+    "BeamTransportHandoverSortField": [
+      "id",
+      "handover_code",
+      "handover_type",
+      "result_code",
+      "occurred_at",
+      "created_at"
+    ],
+    "TransportHandoverResult": [
+      "ACCEPTED",
+      "REJECTED"
+    ],
+    "TransportHandoverType": [
+      "OUTBOUND",
+      "TRANSFER",
+      "ARRIVAL"
+    ],
+    "PermissionSortField": [
+      "id",
+      "permission_code",
+      "permission_name",
+      "module_code",
+      "created_at",
+      "updated_at"
+    ],
+    "RoleScope": [
+      "SYSTEM",
+      "PROJECT"
+    ],
+    "RoleSortField": [
+      "id",
+      "role_code",
+      "role_name",
+      "created_at",
+      "updated_at"
+    ],
+    "UserSortField": [
+      "id",
+      "username",
+      "display_name",
+      "created_at",
+      "updated_at"
+    ],
+    "ProjectMemberSortField": [
+      "id",
+      "username",
+      "created_at",
+      "updated_at"
+    ],
+    "SortOrder": [
+      "asc",
+      "desc"
+    ],
+    "YardAreaSortField": [
+      "id",
+      "area_code",
+      "area_name",
+      "sort_order",
+      "created_at",
+      "updated_at"
+    ],
+    "Metric": [
+      "TEMPERATURE",
+      "HUMIDITY",
+      "PRESSURE",
+      "STRAIN"
+    ]
+  },
+  "beam_status_labels": {
+    "UNPRODUCED": "未生产",
+    "REBAR_BINDING": "钢筋绑扎",
+    "REBAR_CHECK": "钢筋验收",
+    "FORMWORK_CHECK": "模板验收",
+    "CONCRETE_CASTING": "混凝土浇筑",
+    "CURING": "养护",
+    "TENSION_GROUTING": "张拉压浆",
+    "QUALITY_ACCEPTED": "成品验收",
+    "STORED": "存梁",
+    "READY_TO_SHIP": "待出厂",
+    "TRANSPORTING": "运输中",
+    "ARRIVED": "已到场",
+    "ERECTING": "架设中",
+    "COMPLETED": "架设完成"
+  },
+  "units": {
+    "TEMPERATURE": "degC",
+    "HUMIDITY": "%",
+    "PRESSURE": "MPa",
+    "STRAIN": "ue"
+  }
+}

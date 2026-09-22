@@ -1,0 +1,7 @@
+{
+  "work_order_code": "DEMO-W001",
+  "beam_code": "DEMO-B001",
+  "order_type": "PLACE",
+  "target_position_code": "DEMO-POS001",
+  "planned_at": "2026-09-22T08:00:00Z"
+}

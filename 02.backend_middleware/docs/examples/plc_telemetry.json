@@ -1,0 +1,10 @@
+{
+  "message_id": "PLC001-20260922-000001",
+  "device_id": "PLC001",
+  "beam_code": "DEMO-B001",
+  "observed_at": "2026-09-22T08:00:00Z",
+  "measurements": [
+    {"metric": "TEMPERATURE", "value": 28.5, "unit": "degC"},
+    {"metric": "HUMIDITY", "value": 85.0, "unit": "%"}
+  ]
+}

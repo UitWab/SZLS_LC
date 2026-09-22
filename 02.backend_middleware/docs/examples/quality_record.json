@@ -1,0 +1,11 @@
+{
+  "inspection_code": "DEMO-Q001",
+  "beam_code": "DEMO-B001",
+  "inspection_type_code": "DIMENSION",
+  "result_code": "PASS",
+  "inspected_at": "2026-09-22T08:00:00Z",
+  "actor_name": "联调检验员",
+  "items": [
+    {"item_code": "LENGTH", "item_name": "梁长", "observed_value": "32000.000", "unit": "mm", "result_code": "PASS"}
+  ]
+}
