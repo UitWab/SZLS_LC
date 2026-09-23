@@ -2,12 +2,12 @@
 
 ## 1. 文档信息
 
-- 数据契约版本：8.0.0（开发完成，待独立测试、审计与冻结）
+- 数据契约版本：9.0.0（V9 开发中，尚未冻结）
 - Python：3.11 及以上
 - 数据库：MySQL 8.0
 - A 模块包名：`backend_db`
 - B 模块唯一组合入口：`backend_db.interfaces.create_database_services`
-- 当前数据库迁移版本：`f8c2d4e6a709`
+- 目标数据库迁移版本：`a9d3e5f7b102`
 
 本说明定义 A 数据库模块向 B 后端中间件模块提供的 Python 调用契约。B 只依赖公开接口、DTO、枚举和异常，不直接依赖 ORM、CRUD、Session 或表结构实现。
 
@@ -78,6 +78,7 @@ database_services = create_database_services()
 | `process_records` | 已结束梁工序执行事实和受控作废 |
 | `quality_records` | 质量检查事实、检查项、复检和受控作废 |
 | `transport_records` | 运输出场、转交和到场交接事实 |
+| `abnormal_issues` | 已判定异常事项及受控处理状态 |
 | `beams` | 梁资料、状态和当前梁位管理 |
 
 服务方法为同步 Python 调用。服务集合可以由 B 在应用启动时创建并复用；每次方法调用都会在 A 模块内部创建和关闭数据库 Session。
@@ -168,6 +169,7 @@ result = database_services.beams.list(
 | 梁工序执行记录 | 项目、梁、工序、结果、来源、时间、作废、修正和关键词 |
 | 质量检查记录 | 项目、梁、工序、执行记录、检查类型、结果、来源、时间、复检、作废和关键词 |
 | 运输交接记录 | 项目、梁、交接类型、结果、来源、时间、车辆、承运单位、作废和关键词 |
+| 异常事项 | 项目、异常编码、梁、设备、分类、类型、等级、状态、来源、发生时间范围、外部记录标识和关键词 |
 | 操作审计日志 | 项目编码、操作用户ID、操作人名称、动作代码、资源类型、资源编码、结果代码、请求ID、来源、发生时间范围、关键词 |
 
 排序字段必须使用对应的 `*SortField` 枚举，顺序使用 `SortOrder.ASC` 或 `SortOrder.DESC`，不接受 B 传入任意数据库字段名。
@@ -396,6 +398,23 @@ V7 不提供普通更新、物理删除、审批、放行、附件或任意结�
 
 V8 不提供更新、删除、调度、轨迹、附件或运单流程，不自动修改梁状态、生命周期事件或审计日志。
 
+### 8.15 异常事项 `database_services.abnormal_issues`
+
+| 方法 | 输入 | 返回 |
+| --- | --- | --- |
+| `record(data)` | `AbnormalIssueCreate` | `AbnormalIssueRead` |
+| `get(issue_code, project_code=...)` | 异常编码、必填项目作用域 | `AbnormalIssueRead` |
+| `list(filters, page_request, sort_by, sort_order)` | `AbnormalIssueFilter` 等 | `PageResult[AbnormalIssueSummary]` |
+| `start_processing(issue_code, data, project_code=...)` | `AbnormalIssueActorAction` | `AbnormalIssueRead` |
+| `resolve(issue_code, data, project_code=...)` | `AbnormalIssueResolve` | `AbnormalIssueRead` |
+| `close(issue_code, data, project_code=...)` | `AbnormalIssueClose` | `AbnormalIssueRead` |
+
+异常类别包括 `PROGRESS`、`PRODUCTION`、`QUALITY`、`STORAGE`、`LOGISTICS`、`EQUIPMENT`、`SAFETY`、`INSPECTION`；等级包括 `INFO`、`WARNING`、`CRITICAL`。
+
+状态按 `OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED` 受控变化，也允许 `OPEN -> RESOLVED`。异常必须解决后才能关闭，关闭后不能重开。相同内容的动作重试幂等，不同内容不得覆盖既有处理事实。
+
+异常事项必须属于项目，可选关联同项目梁和外部 `device_code`。A 不判断是否应产生异常，不提供设备接入、阈值计算、自动检测、通知、派工、任意更新或删除接口。
+
 ## 9. 梁状态契约
 
 梁状态从 `backend_db.schemas.BeamStatus` 导入。当前 14 个稳定编码为：
@@ -444,6 +463,7 @@ B 应捕获 `BackendDBError` 及其子类，并在 B 层转换为 HTTP 或消息
 | `BeamProcessExecutionNotFoundError` | `beam_process_execution_not_found` | 梁工序执行记录不存在或不属于当前项目 |
 | `BeamQualityInspectionNotFoundError` | `beam_quality_inspection_not_found` | 质量检查记录不存在或不属于当前项目 |
 | `BeamTransportHandoverNotFoundError` | `beam_transport_handover_not_found` | 运输交接记录不存在或不属于当前项目 |
+| `AbnormalIssueNotFoundError` | `abnormal_issue_not_found` | 异常事项不存在或不属于当前项目 |
 | `ResourceConflictError` | `resource_conflict` | 资源状态冲突的公共父类 |
 | `ResourceAlreadyExistsError` | `resource_already_exists` | 唯一编码已存在 |
 | `PositionOccupiedError` | `position_occupied` | 目标梁位被占用 |
@@ -489,7 +509,9 @@ B 可以基于 V7 契约开发质量检查录入、履历展示和权限适配�
 
 B 可以基于 V8 契约开发交接录入、运输里程碑展示和权限适配，并通过 `transport_records` 记录、读取、筛选或受控作废。运输调度、车辆档案、轨迹和自动状态联动不属于该契约。
 
-B 不应假设当前已经具备生产或质量任务编排、二维码/RFID 独立身份、运输调度和轨迹、设备、告警或通用消息投递能力。V8 只提供已发生的运输交接事实。
+B 可以基于 V9 契约开发异常中心的 HTTP、权限、展示和处理流程，并通过 `abnormal_issues` 记录、读取、筛选、开始处理、解决和关闭异常。B 负责判断何时产生异常、选择分类和等级，以及通知、派工和设备接入。
+
+B 不应假设当前已经具备生产或质量任务编排、二维码/RFID 独立身份、运输调度和轨迹、设备档案、测点采集、自动异常计算或通用消息投递能力。V9 只保存已经判定成立的异常事项。
 
 ## 12. 联调与版本规则
 

@@ -74,6 +74,10 @@ class BeamTransportHandoverNotFoundError(ResourceNotFoundError):
     code = "beam_transport_handover_not_found"
 
 
+class AbnormalIssueNotFoundError(ResourceNotFoundError):
+    code = "abnormal_issue_not_found"
+
+
 class ResourceConflictError(BackendDBError):
     """操作与资源当前状态或唯一约束冲突。"""
 

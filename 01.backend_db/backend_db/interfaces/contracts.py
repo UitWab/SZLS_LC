@@ -40,6 +40,14 @@ from backend_db.schemas import (
     BeamTransportHandoverSortField,
     BeamTransportHandoverSummary,
     BeamTransportHandoverVoid,
+    AbnormalIssueActorAction,
+    AbnormalIssueClose,
+    AbnormalIssueCreate,
+    AbnormalIssueFilter,
+    AbnormalIssueRead,
+    AbnormalIssueResolve,
+    AbnormalIssueSortField,
+    AbnormalIssueSummary,
     BeamRead,
     BeamSortField,
     BeamStatusChange,
@@ -497,6 +505,41 @@ class BeamTransportHandoverServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class AbnormalIssueServiceProtocol(Protocol):
+    def record(self, data: AbnormalIssueCreate) -> AbnormalIssueRead: ...
+    def get(self, issue_code: str, *, project_code: str) -> AbnormalIssueRead: ...
+    def list(
+        self,
+        filters: AbnormalIssueFilter,
+        page_request: PageRequest | None = None,
+        *,
+        sort_by: AbnormalIssueSortField = AbnormalIssueSortField.OCCURRED_AT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> PageResult[AbnormalIssueSummary]: ...
+    def start_processing(
+        self,
+        issue_code: str,
+        data: AbnormalIssueActorAction,
+        *,
+        project_code: str,
+    ) -> AbnormalIssueRead: ...
+    def resolve(
+        self,
+        issue_code: str,
+        data: AbnormalIssueResolve,
+        *,
+        project_code: str,
+    ) -> AbnormalIssueRead: ...
+    def close(
+        self,
+        issue_code: str,
+        data: AbnormalIssueClose,
+        *,
+        project_code: str,
+    ) -> AbnormalIssueRead: ...
+
+
+@runtime_checkable
 class BeamServiceProtocol(Protocol):
     def create(self, data: BeamCreate) -> BeamRead: ...
     def get(self, beam_id: int, *, project_code: str | None = None) -> BeamRead: ...
@@ -557,4 +600,5 @@ class DatabaseServices:
     process_records: BeamProcessExecutionServiceProtocol
     quality_records: BeamQualityInspectionServiceProtocol
     transport_records: BeamTransportHandoverServiceProtocol
+    abnormal_issues: AbnormalIssueServiceProtocol
     beams: BeamServiceProtocol

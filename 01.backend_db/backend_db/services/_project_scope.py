@@ -8,11 +8,16 @@ def resolve_project_scope(
     project_code: str | None,
     *,
     require_active: bool = False,
+    for_share: bool = False,
 ):
     """把公开项目编码解析为内部项目；None 表示 V1 全局数据域。"""
     if project_code is None:
         return None
-    project = get_project_by_code(unit.session, project_code)
+    project = get_project_by_code(
+        unit.session,
+        project_code,
+        for_share=for_share,
+    )
     if project is None:
         raise ProjectNotFoundError(f"项目不存在: project_code={project_code}")
     if require_active and not project.is_active:

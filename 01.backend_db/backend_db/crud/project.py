@@ -45,10 +45,15 @@ def get_project_by_code(
     project_code: str,
     *,
     for_update: bool = False,
+    for_share: bool = False,
 ) -> Project | None:
+    if for_update and for_share:
+        raise ValueError("项目查询不能同时使用排他锁和共享锁")
     statement = select(Project).where(Project.project_code == project_code)
     if for_update:
         statement = statement.with_for_update()
+    elif for_share:
+        statement = statement.with_for_update(read=True)
     return session.scalar(statement)
 
 

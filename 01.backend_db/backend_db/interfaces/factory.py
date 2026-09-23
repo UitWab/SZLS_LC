@@ -12,6 +12,7 @@ def create_database_services() -> DatabaseServices:
         BeamProcessExecutionService,
         BeamQualityInspectionService,
         BeamTransportHandoverService,
+        AbnormalIssueService,
         BeamService,
         BeamTypeService,
         ProjectService,
@@ -35,5 +36,6 @@ def create_database_services() -> DatabaseServices:
         process_records=BeamProcessExecutionService(),
         quality_records=BeamQualityInspectionService(),
         transport_records=BeamTransportHandoverService(),
+        abnormal_issues=AbnormalIssueService(),
         beams=BeamService(),
     )

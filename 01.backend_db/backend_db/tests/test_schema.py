@@ -64,6 +64,8 @@ def test_core_tables_exist():
         "beam_process_execution",
         "beam_quality_inspection",
         "beam_quality_inspection_item",
+        "beam_transport_handover",
+        "abnormal_issue",
         "user_credential",
         "yard_area",
         "beam_type",
@@ -514,6 +516,84 @@ def test_beam_transport_handover_schema():
     )
     assert indexes["ix_beam_transport_handover_beam_occurred_id"] == (
         "beam_id", "occurred_at", "id"
+    )
+
+
+def test_abnormal_issue_schema():
+    inspector = inspect(engine)
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("abnormal_issue")
+    }
+    assert set(columns) == {
+        "id",
+        "project_id",
+        "issue_code",
+        "beam_id",
+        "device_code",
+        "category_code",
+        "issue_type_code",
+        "severity",
+        "status",
+        "title",
+        "message",
+        "occurred_at",
+        "reported_by_user_id",
+        "reported_by_name",
+        "source",
+        "external_record_id",
+        "processing_started_at",
+        "processing_by_user_id",
+        "processing_by_name",
+        "resolved_at",
+        "resolved_by_user_id",
+        "resolved_by_name",
+        "resolution_summary",
+        "closed_at",
+        "closed_by_user_id",
+        "closed_by_name",
+        "close_note",
+        "created_at",
+        "updated_at",
+    }
+    assert columns["project_id"]["nullable"] is False
+    assert columns["beam_id"]["nullable"] is True
+    assert _foreign_keys(inspector, "abnormal_issue") == {
+        "project_id": "project",
+        "beam_id": "beam",
+        "reported_by_user_id": "app_user",
+        "processing_by_user_id": "app_user",
+        "resolved_by_user_id": "app_user",
+        "closed_by_user_id": "app_user",
+    }
+    unique_columns = _unique_columns(inspector, "abnormal_issue")
+    assert ("issue_code",) in unique_columns
+    assert ("source", "external_record_id") in unique_columns
+    check_names = {
+        item["name"] for item in inspector.get_check_constraints("abnormal_issue")
+    }
+    assert {
+        "ck_abnormal_issue_status_fields",
+        "ck_abnormal_issue_processing_actor",
+    }.issubset(check_names)
+    indexes = {
+        index["name"]: tuple(index["column_names"])
+        for index in inspector.get_indexes("abnormal_issue")
+    }
+    assert indexes["ix_abnormal_issue_project_occurred_id"] == (
+        "project_id", "occurred_at", "id"
+    )
+    assert indexes["ix_abnormal_issue_project_status_occurred_id"] == (
+        "project_id", "status", "occurred_at", "id"
+    )
+    assert indexes["ix_abnormal_issue_project_category_status_occurred_id"] == (
+        "project_id", "category_code", "status", "occurred_at", "id"
+    )
+    assert indexes["ix_abnormal_issue_beam_occurred_id"] == (
+        "beam_id", "occurred_at", "id"
+    )
+    assert indexes["ix_abnormal_issue_project_device_occurred_id"] == (
+        "project_id", "device_code", "occurred_at", "id"
     )
 
 

@@ -20,6 +20,7 @@ from backend_db.models.beam_quality_inspection import (
     BeamQualityInspectionItem,
 )
 from backend_db.models.beam_transport_handover import BeamTransportHandover
+from backend_db.models.abnormal_issue import AbnormalIssue
 from backend_db.models.yard_area import YardArea
 from backend_db.models.beam_type import BeamType
 from backend_db.models.beam_position import BeamPosition
@@ -45,6 +46,7 @@ __all__ = [
     "BeamQualityInspection",
     "BeamQualityInspectionItem",
     "BeamTransportHandover",
+    "AbnormalIssue",
     "YardArea",
     "BeamType",
     "BeamPosition",

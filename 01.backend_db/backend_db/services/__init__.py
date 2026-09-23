@@ -11,6 +11,7 @@ from backend_db.services.beam_lifecycle_event import BeamLifecycleEventService
 from backend_db.services.beam_process_execution import BeamProcessExecutionService
 from backend_db.services.beam_quality_inspection import BeamQualityInspectionService
 from backend_db.services.beam_transport_handover import BeamTransportHandoverService
+from backend_db.services.abnormal_issue import AbnormalIssueService
 
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "BeamProcessExecutionService",
     "BeamQualityInspectionService",
     "BeamTransportHandoverService",
+    "AbnormalIssueService",
 ]
